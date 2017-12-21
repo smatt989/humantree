@@ -1,0 +1,14 @@
+{
+    "extends": "standard",
+    "plugins": [
+        "standard",
+        "promise",
+        "react"
+    ],
+    "rules": {
+        "space-before-function-paren": ["error", "never"],
+        "semi": ["error", "always"],
+        "react/jsx-uses-react": 1,
+        "react/jsx-uses-vars": 1
+    }
+}
