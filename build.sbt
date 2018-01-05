@@ -30,6 +30,7 @@ lazy val project = Project (
       "org.scalatra" %% "scalatra-scalate" % ScalatraVersion,
       "org.scalatra" %% "scalatra-specs2" % ScalatraVersion % "test",
       "org.scalatra" %% "scalatra-json" % ScalatraVersion,
+      "com.typesafe.akka" %% "akka-actor" % "2.4.12",
       "org.json4s"   %% "json4s-jackson" % "3.3.0",
       "ch.qos.logback" % "logback-classic" % "1.1.5" % "runtime",
       "org.eclipse.jetty" % "jetty-webapp" % "8.1.10.v20130312" % "compile;container",
@@ -48,7 +49,10 @@ lazy val project = Project (
       "com.relayrides" % "pushy" % "0.9.2",
       "com.amazonaws" % "aws-java-sdk" % "1.11.46",
       "org.scala-lang" % "scala-reflect" % scalaVersion.value,
-      "com.typesafe.slick" %% "slick-codegen" % SlickVersion
+      "com.typesafe.slick" %% "slick-codegen" % SlickVersion,
+      "com.google.apis" % "google-api-services-gmail" % "v1-rev76-1.23.0",
+      "com.google.oauth-client" % "google-oauth-client-java6" % "1.11.0-beta",
+      "com.google.oauth-client" % "google-oauth-client-jetty" % "1.23.0"
     ),
     scalacOptions := Seq("-feature"),
     mainClass in Compile := Some("JettyLauncher"),

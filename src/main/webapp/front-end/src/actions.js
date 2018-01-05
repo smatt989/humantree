@@ -1,7 +1,7 @@
 import axios from 'axios';
 import {authenticatedSession, authenticationHeader, authenticate} from './utilities';
 
-const domain = CONFIG ? CONFIG.frontServer ? 'http://localhost:8080' : '' : '';
+export const domain = CONFIG ? CONFIG.frontServer ? 'http://localhost:8080' : '' : '';
 
 /*
  * action types
@@ -149,4 +149,161 @@ export function loginClearInputs() {
   return {
     type: LOGIN_CLEAR_INPUTS
   }
+}
+
+export function getTree(root, emails) {
+
+  var data = {}
+
+  if(emails) {
+    data['emails'] = emails
+  }
+
+  if(root){
+    data['root'] = root
+  }
+
+  const request = axios({
+    method: 'post',
+    url: `${domain}/tree`,
+    data: data,
+    headers: authenticate()
+  });
+
+  return {
+    type: 'GET_TREE',
+    payload: request
+  };
+}
+
+export function getTreeSuccess(loaded) {
+  return {
+    type: 'GET_TREE_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function getTreeError(error) {
+  return {
+    type: 'GET_TREE_ERROR',
+    error: error
+  };
+}
+
+export function getConnectedEmailAccounts(root, emails) {
+
+  const request = axios({
+    method: 'get',
+    url: `${domain}/connectedemails`,
+    headers: authenticate()
+  });
+
+  return {
+    type: 'GET_CONNECTED_EMAIL_ACCOUNTS',
+    payload: request
+  };
+}
+
+export function getConnectedEmailAccountsSuccess(loaded) {
+  return {
+    type: 'GET_CONNECTED_EMAIL_ACCOUNTS_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function getConnectedEmailAccountsError(error) {
+  return {
+    type: 'GET_CONNECTED_EMAIL_ACCOUNTS_ERROR',
+    error: error
+  };
+}
+
+export function startScraping(email) {
+
+  const request = axios({
+    method: 'get',
+    url: `${domain}/scrape/${email}`,
+    headers: authenticate()
+  });
+
+  return {
+    type: 'START_SCRAPING',
+    payload: request
+  };
+}
+
+export function startScrapingSuccess(loaded) {
+  return {
+    type: 'START_SCRAPING_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function startScrapingError(error) {
+  return {
+    type: 'START_SCRAPING_ERROR',
+    error: error
+  };
+}
+
+export function shareTree(root) {
+
+  const request = axios({
+    method: 'post',
+    url: `${domain}/share`,
+    headers: authenticate(),
+    data: {root: root}
+  });
+
+  return {
+    type: 'SHARE_TREE',
+    payload: request
+  };
+}
+
+export function shareTreeSuccess(loaded) {
+  return {
+    type: 'SHARE_TREE_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function shareTreeError(error) {
+  return {
+    type: 'SHARE_TREE_ERROR',
+    error: error
+  };
+}
+
+export function removeKeyFromState() {
+  return {
+    type: 'REMOVE_KEY_FROM_STATE'
+  }
+}
+
+export function getSharedTree(key) {
+
+  const request = axios({
+    method: 'post',
+    url: `${domain}/shared/${key}`
+  });
+
+  return {
+    type: 'GET_SHARED_TREE',
+    payload: request
+  };
+}
+
+export function getSharedTreeSuccess(loaded) {
+  return {
+    type: 'GET_SHARED_TREE_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function getSharedTreeError(error) {
+  return {
+    type: 'GET_SHARED_TREE_ERROR',
+    error: error
+  };
 }

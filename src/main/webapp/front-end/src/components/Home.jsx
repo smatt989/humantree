@@ -12,8 +12,8 @@ export default class Home extends React.Component {
           <div className="jumbotron jumbotron-home text-xs-center">
               <div className='row'>
                 <div className='col-md-12'>
-                  <h1>Knowledge Acquisition</h1>
-                  <h3>Efficiently and Intelligently Collect Expert Annotations</h3>
+                  <h1>Know Thyself</h1>
+                  <h3>See what's good</h3>
                 </div>
               </div>
               <div className='row m-t-2'>

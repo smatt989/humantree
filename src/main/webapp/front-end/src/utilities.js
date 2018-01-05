@@ -45,3 +45,21 @@ export const tryLogin = (email, password) => {
 export function isNullLabel(label) {
   return label.labelValue == 0 && !label.point1x && !label.xCoordinate
 }
+
+export function dispatchPattern(request, success, error, successCallback) {
+    return function(input1, input2, input3, input4, input5) {
+            return(store.dispatch(request(input1, input2, input3, input4, input5))
+                .then(response => {
+                    if(response.error) {
+                        store.dispatch(error(response.error));
+                        return false;
+                    }
+
+                    store.dispatch(success(response.payload.data));
+                    if(successCallback){
+                        successCallback(response.payload.data)
+                    }
+                    return true;
+                }))
+                }
+}

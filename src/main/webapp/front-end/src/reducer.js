@@ -19,7 +19,11 @@ function cleanState() {
     signupEmail: Map({ email: '' }),
     signupPassword: Map({ password: '' }),
     loginEmail: Map({ email: '' }),
-    loginPassword: Map({ password: '' })
+    loginPassword: Map({ password: '' }),
+    getTree: Map({tree: null, error: null, loading: false}),
+    getEmails: Map({emails: List.of(), error: null, loading: false}),
+    startScraping: Map({loading: false, error: null}),
+    sharingKey: Map({key: null, error: null, loading: false})
   });
 
   return cleanState;
@@ -90,6 +94,70 @@ function loginClearInputs(state) {
   return newState.set('loginPassword', Map({ password: '' }));
 }
 
+function getTree(state) {
+  return state.set('getTree', Map({tree: null, error: null, loading: true}));
+}
+
+function getTreeSuccess(state, tree) {
+  return state.set('getTree', Map({tree: Immutable.fromJS(tree), error: null, loading: false}));
+}
+
+function getTreeError(state, error) {
+  return state.set('getTree', Map({tree: null, error: Immutable.fromJS(error), loading: false}));
+}
+
+function getConnectedEmailAccounts(state) {
+  return state.set('getEmails', Map({emails: List.of(), error: null, loading: true}));
+}
+
+function getConnectedEmailAccountsSuccess(state, emails) {
+ return state.set('getEmails', Map({emails: Immutable.fromJS(emails), error: null, loading: false}));
+}
+
+function getConnectedEmailAccountsError(state, error) {
+  return state.set('getEmails', Map({emails: List.of(), error: Immutable.fromJS(error), loading: false}));
+}
+
+function startScraping(state) {
+  return state.set('startScraping', Map({loading: true, error: null}));
+}
+
+function startScrapingSuccess(state) {
+  return state.set('startScraping', Map({loading: false, error: null}));
+}
+
+function startScrapingError(state, error) {
+  return state.set('startScraping', Map({loading: false, error: Immutable.fromJS(error)}));
+}
+
+function shareTree(state) {
+  return state.set('sharingKey', Map({key: null, error: null, loading: true}));
+}
+
+function shareTreeSuccess(state, key) {
+  return state.set('sharingKey', Map({key: key.key, error: null, loading: false}));
+}
+
+function shareTreeError(state, error) {
+  return state.set('sharingKey', Map({key: null, error: Immutable.fromJS(error), loading: false}));
+}
+
+function removeKeyFromState(state) {
+  return state.set('sharingKey', Map({key: null, error: null, loading: false}));
+}
+
+function getSharedTree(state) {
+  return getTree(state);
+}
+
+function getSharedTreeSuccess(state, tree) {
+  return getTreeSuccess(state, tree);
+}
+
+function getSharedTreeError(state, error) {
+  return getTreeError(state, error);
+}
+
 export default function reducer(state = Map(), action) {
   switch (action.type) {
     case 'CLEAN_STATE':
@@ -124,6 +192,38 @@ export default function reducer(state = Map(), action) {
       return loginPasswordChanged(state, action.password);
     case LOGIN_CLEAR_INPUTS:
       return loginClearInputs(state);
+    case 'GET_TREE':
+      return getTree(state);
+    case 'GET_TREE_SUCCESS':
+      return getTreeSuccess(state, action.payload);
+    case 'GET_TREE_ERROR':
+      return getTreeError(state, action.error);
+    case 'GET_CONNECTED_EMAIL_ACCOUNTS':
+      return getConnectedEmailAccounts(state);
+    case 'GET_CONNECTED_EMAIL_ACCOUNTS_SUCCESS':
+      return getConnectedEmailAccountsSuccess(state, action.payload);
+    case 'GET_CONNECTED_EMAIL_ACCOUNTS_ERROR':
+      return getConnectedEmailAccountsError;
+    case 'START_SCRAPING':
+      return startScraping(state);
+    case 'START_SCRAPING_SUCCESS':
+      return startScrapingSuccess(state, action.payload);
+    case 'START_SCRAPING_ERROR':
+      return startScrapingError(state, action.error);
+    case 'SHARE_TREE':
+      return shareTree(state);
+    case 'SHARE_TREE_SUCCESS':
+      return shareTreeSuccess(state, action.payload);
+    case 'SHARE_TREE_ERROR':
+      return shareTreeError(state, action.error);
+    case 'REMOVE_KEY_FROM_STATE':
+      return removeKeyFromState(state);
+    case 'GET_SHARED_TREE':
+      return getSharedTree(state);
+    case 'GET_SHARED_TREE_SUCCESS':
+      return getSharedTreeSuccess(state, action.payload);
+    case 'GET_SHARED_TREE_ERROR':
+      return getSharedTreeError(state, action.error);
     default:
       return state;
   }

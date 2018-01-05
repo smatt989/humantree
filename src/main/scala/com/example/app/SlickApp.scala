@@ -7,7 +7,9 @@ import org.scalatra.{FutureSupport, ScalatraServlet}
 class SlickApp() extends ScalatraServlet with FutureSupport
   with UserRoutes
   with SessionRoutes
-  with AppRoutes {
+  with AppRoutes
+  with GmailAuthRoutes
+  with TreeRoutes{
 
   def db = AppGlobals.db
 

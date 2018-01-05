@@ -14,7 +14,7 @@ trait Tables {
   import slick.jdbc.{GetResult => GR}
 
   /** DDL for all tables. Call .create to execute. */
-  lazy val schema: profile.SchemaDescription = DeviceTokens.schema ++ Migrations.schema ++ UserAccounts.schema ++ UserConnections.schema ++ UserSessions.schema
+  lazy val schema: profile.SchemaDescription = Array(DeviceTokens.schema, GmailAccessTokens.schema, GmailScrapeProgresses.schema, Introductions.schema, Migrations.schema, ShareableContexts.schema, UserAccounts.schema, UserConnections.schema, UserSessions.schema).reduceLeft(_ ++ _)
   @deprecated("Use .schema instead of .ddl", "3.0")
   def ddl = schema
 
@@ -47,6 +47,108 @@ trait Tables {
   /** Collection-like TableQuery object for table DeviceTokens */
   lazy val DeviceTokens = new TableQuery(tag => new DeviceTokens(tag))
 
+  /** Entity class storing rows of table GmailAccessTokens
+   *  @param gmailAccesTokenId Database column GMAIL_ACCES_TOKEN_ID SqlType(VARCHAR), PrimaryKey
+   *  @param userId Database column USER_ID SqlType(INTEGER)
+   *  @param email Database column EMAIL SqlType(VARCHAR)
+   *  @param accessToken Database column ACCESS_TOKEN SqlType(VARCHAR) */
+  case class GmailAccessTokensRow(gmailAccesTokenId: String, userId: Int, email: String, accessToken: String)
+  /** GetResult implicit for fetching GmailAccessTokensRow objects using plain SQL queries */
+  implicit def GetResultGmailAccessTokensRow(implicit e0: GR[String], e1: GR[Int]): GR[GmailAccessTokensRow] = GR{
+    prs => import prs._
+    GmailAccessTokensRow.tupled((<<[String], <<[Int], <<[String], <<[String]))
+  }
+  /** Table description of table GMAIL_ACCESS_TOKENS. Objects of this class serve as prototypes for rows in queries. */
+  class GmailAccessTokens(_tableTag: Tag) extends Table[GmailAccessTokensRow](_tableTag, Some("BEE"), "GMAIL_ACCESS_TOKENS") {
+    def * = (gmailAccesTokenId, userId, email, accessToken) <> (GmailAccessTokensRow.tupled, GmailAccessTokensRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = (Rep.Some(gmailAccesTokenId), Rep.Some(userId), Rep.Some(email), Rep.Some(accessToken)).shaped.<>({r=>import r._; _1.map(_=> GmailAccessTokensRow.tupled((_1.get, _2.get, _3.get, _4.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column GMAIL_ACCES_TOKEN_ID SqlType(VARCHAR), PrimaryKey */
+    val gmailAccesTokenId: Rep[String] = column[String]("GMAIL_ACCES_TOKEN_ID", O.PrimaryKey)
+    /** Database column USER_ID SqlType(INTEGER) */
+    val userId: Rep[Int] = column[Int]("USER_ID")
+    /** Database column EMAIL SqlType(VARCHAR) */
+    val email: Rep[String] = column[String]("EMAIL")
+    /** Database column ACCESS_TOKEN SqlType(VARCHAR) */
+    val accessToken: Rep[String] = column[String]("ACCESS_TOKEN")
+
+    /** Foreign key referencing UserAccounts (database name GMAIL_ACCES_TOKEN_TO_USERS_FK) */
+    lazy val userAccountsFk = foreignKey("GMAIL_ACCES_TOKEN_TO_USERS_FK", userId, UserAccounts)(r => r.userAccountId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+  }
+  /** Collection-like TableQuery object for table GmailAccessTokens */
+  lazy val GmailAccessTokens = new TableQuery(tag => new GmailAccessTokens(tag))
+
+  /** Entity class storing rows of table GmailScrapeProgresses
+   *  @param gmailScrapeProgressId Database column GMAIL_SCRAPE_PROGRESS_ID SqlType(VARCHAR), PrimaryKey
+   *  @param gmailAccessTokenId Database column GMAIL_ACCESS_TOKEN_ID SqlType(VARCHAR)
+   *  @param totalThreads Database column TOTAL_THREADS SqlType(INTEGER), Default(None)
+   *  @param threadsProcessed Database column THREADS_PROCESSED SqlType(INTEGER)
+   *  @param status Database column STATUS SqlType(VARCHAR)
+   *  @param lastPulledMillis Database column LAST_PULLED_MILLIS SqlType(BIGINT) */
+  case class GmailScrapeProgressesRow(gmailScrapeProgressId: String, gmailAccessTokenId: String, totalThreads: Option[Int] = None, threadsProcessed: Int, status: String, lastPulledMillis: Long)
+  /** GetResult implicit for fetching GmailScrapeProgressesRow objects using plain SQL queries */
+  implicit def GetResultGmailScrapeProgressesRow(implicit e0: GR[String], e1: GR[Option[Int]], e2: GR[Int], e3: GR[Long]): GR[GmailScrapeProgressesRow] = GR{
+    prs => import prs._
+    GmailScrapeProgressesRow.tupled((<<[String], <<[String], <<?[Int], <<[Int], <<[String], <<[Long]))
+  }
+  /** Table description of table GMAIL_SCRAPE_PROGRESSES. Objects of this class serve as prototypes for rows in queries. */
+  class GmailScrapeProgresses(_tableTag: Tag) extends Table[GmailScrapeProgressesRow](_tableTag, Some("BEE"), "GMAIL_SCRAPE_PROGRESSES") {
+    def * = (gmailScrapeProgressId, gmailAccessTokenId, totalThreads, threadsProcessed, status, lastPulledMillis) <> (GmailScrapeProgressesRow.tupled, GmailScrapeProgressesRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = (Rep.Some(gmailScrapeProgressId), Rep.Some(gmailAccessTokenId), totalThreads, Rep.Some(threadsProcessed), Rep.Some(status), Rep.Some(lastPulledMillis)).shaped.<>({r=>import r._; _1.map(_=> GmailScrapeProgressesRow.tupled((_1.get, _2.get, _3, _4.get, _5.get, _6.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column GMAIL_SCRAPE_PROGRESS_ID SqlType(VARCHAR), PrimaryKey */
+    val gmailScrapeProgressId: Rep[String] = column[String]("GMAIL_SCRAPE_PROGRESS_ID", O.PrimaryKey)
+    /** Database column GMAIL_ACCESS_TOKEN_ID SqlType(VARCHAR) */
+    val gmailAccessTokenId: Rep[String] = column[String]("GMAIL_ACCESS_TOKEN_ID")
+    /** Database column TOTAL_THREADS SqlType(INTEGER), Default(None) */
+    val totalThreads: Rep[Option[Int]] = column[Option[Int]]("TOTAL_THREADS", O.Default(None))
+    /** Database column THREADS_PROCESSED SqlType(INTEGER) */
+    val threadsProcessed: Rep[Int] = column[Int]("THREADS_PROCESSED")
+    /** Database column STATUS SqlType(VARCHAR) */
+    val status: Rep[String] = column[String]("STATUS")
+    /** Database column LAST_PULLED_MILLIS SqlType(BIGINT) */
+    val lastPulledMillis: Rep[Long] = column[Long]("LAST_PULLED_MILLIS")
+
+    /** Foreign key referencing GmailAccessTokens (database name GMAIL_SCRAPE_PROGRESS_TO_GMAIL_ACCESS_TOKEN_FK) */
+    lazy val gmailAccessTokensFk = foreignKey("GMAIL_SCRAPE_PROGRESS_TO_GMAIL_ACCESS_TOKEN_FK", gmailAccessTokenId, GmailAccessTokens)(r => r.gmailAccesTokenId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+  }
+  /** Collection-like TableQuery object for table GmailScrapeProgresses */
+  lazy val GmailScrapeProgresses = new TableQuery(tag => new GmailScrapeProgresses(tag))
+
+  /** Entity class storing rows of table Introductions
+   *  @param introductionId Database column INTRODUCTION_ID SqlType(VARCHAR), PrimaryKey
+   *  @param senderPersonEmail Database column SENDER_PERSON_EMAIL SqlType(VARCHAR)
+   *  @param receiverPersonEmail Database column RECEIVER_PERSON_EMAIL SqlType(VARCHAR)
+   *  @param introPersonEmail Database column INTRO_PERSON_EMAIL SqlType(VARCHAR)
+   *  @param introTimeMillis Database column INTRO_TIME_MILLIS SqlType(BIGINT) */
+  case class IntroductionsRow(introductionId: String, senderPersonEmail: String, receiverPersonEmail: String, introPersonEmail: String, introTimeMillis: Long)
+  /** GetResult implicit for fetching IntroductionsRow objects using plain SQL queries */
+  implicit def GetResultIntroductionsRow(implicit e0: GR[String], e1: GR[Long]): GR[IntroductionsRow] = GR{
+    prs => import prs._
+    IntroductionsRow.tupled((<<[String], <<[String], <<[String], <<[String], <<[Long]))
+  }
+  /** Table description of table INTRODUCTIONS. Objects of this class serve as prototypes for rows in queries. */
+  class Introductions(_tableTag: Tag) extends Table[IntroductionsRow](_tableTag, Some("BEE"), "INTRODUCTIONS") {
+    def * = (introductionId, senderPersonEmail, receiverPersonEmail, introPersonEmail, introTimeMillis) <> (IntroductionsRow.tupled, IntroductionsRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = (Rep.Some(introductionId), Rep.Some(senderPersonEmail), Rep.Some(receiverPersonEmail), Rep.Some(introPersonEmail), Rep.Some(introTimeMillis)).shaped.<>({r=>import r._; _1.map(_=> IntroductionsRow.tupled((_1.get, _2.get, _3.get, _4.get, _5.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column INTRODUCTION_ID SqlType(VARCHAR), PrimaryKey */
+    val introductionId: Rep[String] = column[String]("INTRODUCTION_ID", O.PrimaryKey)
+    /** Database column SENDER_PERSON_EMAIL SqlType(VARCHAR) */
+    val senderPersonEmail: Rep[String] = column[String]("SENDER_PERSON_EMAIL")
+    /** Database column RECEIVER_PERSON_EMAIL SqlType(VARCHAR) */
+    val receiverPersonEmail: Rep[String] = column[String]("RECEIVER_PERSON_EMAIL")
+    /** Database column INTRO_PERSON_EMAIL SqlType(VARCHAR) */
+    val introPersonEmail: Rep[String] = column[String]("INTRO_PERSON_EMAIL")
+    /** Database column INTRO_TIME_MILLIS SqlType(BIGINT) */
+    val introTimeMillis: Rep[Long] = column[Long]("INTRO_TIME_MILLIS")
+  }
+  /** Collection-like TableQuery object for table Introductions */
+  lazy val Introductions = new TableQuery(tag => new Introductions(tag))
+
   /** Entity class storing rows of table Migrations
    *  @param migrationId Database column MIGRATION_ID SqlType(INTEGER), PrimaryKey */
   case class MigrationsRow(migrationId: Int)
@@ -66,6 +168,38 @@ trait Tables {
   }
   /** Collection-like TableQuery object for table Migrations */
   lazy val Migrations = new TableQuery(tag => new Migrations(tag))
+
+  /** Entity class storing rows of table ShareableContexts
+   *  @param shareableContextId Database column SHAREABLE_CONTEXT_ID SqlType(VARCHAR), PrimaryKey
+   *  @param userId Database column USER_ID SqlType(INTEGER)
+   *  @param treeRoot Database column TREE_ROOT SqlType(VARCHAR)
+   *  @param createdAtMillis Database column CREATED_AT_MILLIS SqlType(BIGINT) */
+  case class ShareableContextsRow(shareableContextId: String, userId: Int, treeRoot: String, createdAtMillis: Long)
+  /** GetResult implicit for fetching ShareableContextsRow objects using plain SQL queries */
+  implicit def GetResultShareableContextsRow(implicit e0: GR[String], e1: GR[Int], e2: GR[Long]): GR[ShareableContextsRow] = GR{
+    prs => import prs._
+    ShareableContextsRow.tupled((<<[String], <<[Int], <<[String], <<[Long]))
+  }
+  /** Table description of table SHAREABLE_CONTEXTS. Objects of this class serve as prototypes for rows in queries. */
+  class ShareableContexts(_tableTag: Tag) extends Table[ShareableContextsRow](_tableTag, Some("BEE"), "SHAREABLE_CONTEXTS") {
+    def * = (shareableContextId, userId, treeRoot, createdAtMillis) <> (ShareableContextsRow.tupled, ShareableContextsRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = (Rep.Some(shareableContextId), Rep.Some(userId), Rep.Some(treeRoot), Rep.Some(createdAtMillis)).shaped.<>({r=>import r._; _1.map(_=> ShareableContextsRow.tupled((_1.get, _2.get, _3.get, _4.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column SHAREABLE_CONTEXT_ID SqlType(VARCHAR), PrimaryKey */
+    val shareableContextId: Rep[String] = column[String]("SHAREABLE_CONTEXT_ID", O.PrimaryKey)
+    /** Database column USER_ID SqlType(INTEGER) */
+    val userId: Rep[Int] = column[Int]("USER_ID")
+    /** Database column TREE_ROOT SqlType(VARCHAR) */
+    val treeRoot: Rep[String] = column[String]("TREE_ROOT")
+    /** Database column CREATED_AT_MILLIS SqlType(BIGINT) */
+    val createdAtMillis: Rep[Long] = column[Long]("CREATED_AT_MILLIS")
+
+    /** Foreign key referencing UserAccounts (database name SHAREABLE_CONTEXT_TO_USERS_FK) */
+    lazy val userAccountsFk = foreignKey("SHAREABLE_CONTEXT_TO_USERS_FK", userId, UserAccounts)(r => r.userAccountId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+  }
+  /** Collection-like TableQuery object for table ShareableContexts */
+  lazy val ShareableContexts = new TableQuery(tag => new ShareableContexts(tag))
 
   /** Entity class storing rows of table UserAccounts
    *  @param userAccountId Database column USER_ACCOUNT_ID SqlType(INTEGER), AutoInc, PrimaryKey

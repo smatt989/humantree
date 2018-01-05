@@ -1,8 +1,6 @@
 package com.example.app.Routes
 
 import com.example.app.{AuthenticationSupport, CookieStrategy, SlickRoutes}
-import com.example.app.models._
-import org.json4s.JsonAST.JObject
 
 trait AppRoutes extends SlickRoutes with AuthenticationSupport{
 

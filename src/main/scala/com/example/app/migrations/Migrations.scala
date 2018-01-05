@@ -5,6 +5,10 @@ package com.example.app.migrations
   */
 object Migrations {
   lazy val all: Seq[Migration] = Seq(
-    Migration1
+    Migration1,
+    Migration2,
+    Migration3,
+    Migration4,
+    Migration5
   )
 }
