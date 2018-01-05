@@ -49,7 +49,7 @@ module.exports = {
   ],
   output: {
     path: path.join(__dirname, 'dist'),
-    publicPath: '/',
+    publicPath: '/front-end/dist/',
     filename: 'bundle.js'
   },
   devServer: {

@@ -247,7 +247,7 @@ object EmailScraper {
 
       println("saved "+saved.size+" intros...")
 
-      if(threadIndex % 7 == 0 || threadIndex % 19 == 0 || threadIndex == threadSize) {
+      if(threadIndex % 7 == 0 || threadIndex % 19 == 0) {
         GmailScrapeProgress.updateThreadCount(progress.gmailScrapeProgressId, threadIndex)
       }
 
@@ -255,6 +255,7 @@ object EmailScraper {
       saved
     }}
 
+    GmailScrapeProgress.updateThreadCount(progress.gmailScrapeProgressId, threadSize)
     GmailScrapeProgress.updateStatus(progress.gmailScrapeProgressId, GmailScrapeProgress.STATUS_STOPPED)
   }
 

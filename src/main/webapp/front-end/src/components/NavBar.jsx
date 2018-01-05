@@ -11,7 +11,7 @@ const NavRight = (props) => {
     ? (
         <Nav pullRight>
           <LinkContainer to="/emails"><NavItem eventKey={0}>Email Accounts</NavItem></LinkContainer>
-          <LinkContainer to="/realtree"><NavItem eventKey={1}>Tree</NavItem></LinkContainer>
+          <LinkContainer to="/tree"><NavItem eventKey={1}>Tree</NavItem></LinkContainer>
           <NavItem eventKey={2} onClick={() => props.logout(props.session)}>Log Out</NavItem>
         </Nav>
       )
