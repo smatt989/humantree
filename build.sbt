@@ -40,7 +40,7 @@ lazy val project = Project (
       "com.typesafe.slick" %% "slick" % SlickVersion,
       "org.slf4j" % "slf4j-nop" % "1.6.4",
       "com.h2database" % "h2" % "1.4.181",
-      "postgresql" % "postgresql" % "9.1-901.jdbc4",
+      "org.postgresql" % "postgresql" % "9.4.1208",
       "com.mchange" % "c3p0" % "0.9.5.1",
       "org.scalatra" %% "scalatra-auth" % ScalatraVersion,
       "org.mindrot" % "jbcrypt" % "0.3m",
