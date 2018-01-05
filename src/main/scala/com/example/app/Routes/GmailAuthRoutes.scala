@@ -67,10 +67,4 @@ trait GmailAuthRoutes extends SlickRoutes with AuthenticationSupport{
     redirect("/#/emails")
   }
 
-  get("/scrapes") {
-    contentType = formats("json")
-    GmailScrapeProgress.getAll
-
-  }
-
 }

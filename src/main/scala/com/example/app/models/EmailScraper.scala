@@ -248,15 +248,15 @@ object EmailScraper {
       println("saved "+saved.size+" intros...")
 
       if(threadIndex % 7 == 0 || threadIndex % 19 == 0) {
-        GmailScrapeProgress.updateThreadCount(progress.gmailScrapeProgressId, threadIndex)
+        Await.result(GmailScrapeProgress.updateThreadCount(progress.gmailScrapeProgressId, threadIndex), Duration.Inf)
       }
 
       //knownEmails ++= saved.map(_.introPersonEmail)
       saved
     }}
 
-    GmailScrapeProgress.updateThreadCount(progress.gmailScrapeProgressId, threadSize)
-    GmailScrapeProgress.updateStatus(progress.gmailScrapeProgressId, GmailScrapeProgress.STATUS_STOPPED)
+    Await.result(GmailScrapeProgress.updateThreadCount(progress.gmailScrapeProgressId, threadSize), Duration.Inf)
+    Await.result(GmailScrapeProgress.updateStatus(progress.gmailScrapeProgressId, GmailScrapeProgress.STATUS_STOPPED), Duration.Inf)
   }
 
 }
