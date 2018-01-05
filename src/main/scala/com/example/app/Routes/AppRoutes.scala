@@ -18,7 +18,7 @@ trait AppRoutes extends SlickRoutes with AuthenticationSupport{
             var CONFIG = new Object();
             CONFIG.auth = {authenticated.isDefined};
           </script>
-          <script src="http://d3js.org/d3.v3.min.js"></script>
+          <script src="https://d3js.org/d3.v4.min.js"></script>
           <script src="/front-end/dist/bundle.js"></script>
         </body>
       </html>
