@@ -44,9 +44,7 @@ object DBLauncher {
     cpds.setUser(DB_USER)
     cpds.setPassword(DB_PASSWORD)
   }
-
-
-
+  
   // ClassLoaderUtil.defaultClassLoader.loadClass(cpds.getDriverClass).newInstance()
   val dbConf = newDbConfig[JdbcProfile](slickDriver)
 
