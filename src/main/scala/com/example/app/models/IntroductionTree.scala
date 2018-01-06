@@ -7,19 +7,7 @@ import scala.annotation.tailrec
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-/**
-  * Created by matt on 12/31/17.
-  */
-class IntroductionTree(val name: String, var children: Seq[IntroductionTree] = Nil) {
-  def serialize: TreeOutput = TreeOutput(name, children.map(_.serialize))
-
-  def hoop: JObject = JObject(
-    ("name", JString(name)),
-    ("children", JArray(children.map(_.hoop).toList))
-  )
-}
-
-case class TreeOutput(name: String, children: Seq[TreeOutput] = Nil)
+case class IntroductionTree(name: String, children: Seq[IntroductionTree] = Nil)
 
 
 object IntroductionTree {
@@ -56,7 +44,8 @@ object IntroductionTree {
 
 
   //START HERE
-  def guysInTree(trees: Seq[TreeOutput], seen: Seq[String] = Nil): Seq[String] = {
+  @tailrec
+  def guysInTree(trees: Seq[IntroductionTree], seen: Seq[String] = Nil): Seq[String] = {
     val nextLevel = trees.flatMap(_.children)
     val thisLevel = trees.map(_.name)
     if(nextLevel.size > 0){
@@ -66,17 +55,18 @@ object IntroductionTree {
     }
   }
 
-  def whichTreeContainsParent(trees: Seq[TreeOutput], parentName: String): TreeOutput = {
+  def whichTreeContainsParent(trees: Seq[IntroductionTree], parentName: String): IntroductionTree = {
     val treeToContents = trees.map(t => t -> guysInTree(Seq(t)))
     treeToContents.find(_._2.contains(parentName)).get._1
   }
 
-  def amendTreeList(trees: Seq[TreeOutput], fixedTree: TreeOutput, atIndex: Int) = {
+  def amendTreeList(trees: Seq[IntroductionTree], fixedTree: IntroductionTree, atIndex: Int) = {
 
     (trees.take(atIndex) :+ fixedTree) ++ trees.drop(atIndex + 1)
   }
 
-  def repairLineage(lineageOldestFirst: Seq[TreeOutput], currentTree: TreeOutput): TreeOutput = {
+  @tailrec
+  def repairLineage(lineageOldestFirst: Seq[IntroductionTree], currentTree: IntroductionTree): IntroductionTree = {
     if(lineageOldestFirst.size > 0){
       val last = lineageOldestFirst.last
 
@@ -94,7 +84,8 @@ object IntroductionTree {
     }
   }
 
-  def appendTreeToParent(trees: Seq[TreeOutput], tree: TreeOutput, parentName: String, searchParents: Seq[TreeOutput] = Nil): TreeOutput = {
+  @tailrec
+  def appendTreeToParent(trees: Seq[IntroductionTree], tree: IntroductionTree, parentName: String, searchParents: Seq[IntroductionTree] = Nil): IntroductionTree = {
 
     val treeWithParent = whichTreeContainsParent(trees, parentName)
 
@@ -106,7 +97,8 @@ object IntroductionTree {
     }
   }
 
-  def edgesIntoTree(introductions: Seq[(String, String)], trees: Seq[TreeOutput], seen: Set[String]): Seq[TreeOutput] = {
+  @tailrec
+  def edgesIntoTree(introductions: Seq[(String, String)], trees: Seq[IntroductionTree], seen: Set[String]): Seq[IntroductionTree] = {
     if(introductions.size > 0){
       val nextIntros = introductions.tail
 
@@ -122,19 +114,19 @@ object IntroductionTree {
       //println("child: "+child)
 
       if(!seen.contains(parent) && !seen.contains(child)) {
-        val newTree = TreeOutput(parent, Seq(TreeOutput(child, Nil)))
+        val newTree = IntroductionTree(parent, Seq(IntroductionTree(child, Nil)))
         edgesIntoTree(nextIntros, trees :+ newTree, newSeen)
 
       } else if (!seen.contains(parent)){
         val newChildIndex = trees.indexWhere(_.name == child)
         val newChild = trees(newChildIndex)
-        val updatedTree = TreeOutput(parent, Seq(newChild))
+        val updatedTree = IntroductionTree(parent, Seq(newChild))
 
         val newTreeList = amendTreeList(trees, updatedTree, newChildIndex)
         edgesIntoTree(nextIntros, newTreeList, newSeen)
 
       } else if (!seen.contains(child)) {
-        val childTree = TreeOutput(child, Nil)
+        val childTree = IntroductionTree(child, Nil)
 
         val updatedTree = appendTreeToParent(trees, childTree, parent)
 
@@ -161,15 +153,6 @@ object IntroductionTree {
     } else {
       trees
     }
-  }
-
-  def allDescendants(tree: IntroductionTree): Seq[String] = {
-    tree.children.flatMap(allDescendants) :+ tree.name
-  }
-
-  def isADescendant(tree: IntroductionTree, name: String) = {
-     val descendants = allDescendants(tree)
-     descendants.contains(name)
   }
 
 }
