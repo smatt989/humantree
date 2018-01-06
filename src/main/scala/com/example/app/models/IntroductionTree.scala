@@ -1,6 +1,7 @@
 package com.example.app.models
 
 import com.example.app.db.Tables.IntroductionsRow
+import org.joda.time.DateTime
 import org.json4s.JsonAST.{JArray, JObject, JString}
 
 import scala.annotation.tailrec
@@ -32,127 +33,194 @@ object IntroductionTree {
     val intros = introsByEmails(emailContexts).filter(a => a.introPersonEmail != a.senderPersonEmail)
         .filter(_.introPersonEmail != root)
 
-    val fullTree = edgesIntoTree(intros.map(a => a.senderPersonEmail -> a.introPersonEmail), Nil, Set())
+    val senderToIntros = intros.groupBy(_.senderPersonEmail).mapValues(_.map(_.introPersonEmail))
 
-    fullTree.find(_.name == root).toSeq
-    //hereWeGo(root, nodeToChildren)
+    //val firstTime = DateTime.now().getMillis
 
-    //treeFromIntroductions(intros)
+    //val fullTree = edgesIntoTree(intros.map(a => a.senderPersonEmail -> a.introPersonEmail), Nil, Set())
 
-    //treeFromIntroMap(Seq(root), introsBySender)
+    //val x = fullTree.find(_.name == root).toSeq
+
+    //val secondTime = DateTime.now().getMillis
+
+    val y = Seq(tryingThisWay(senderToIntros, IntroductionTree(root)))
+
+    //val thirdTime = DateTime.now().getMillis
+
+    //println("old way: "+(secondTime - firstTime))
+    //println("new way: "+(thirdTime - secondTime))
+
+    y
   }
 
-
-  //START HERE
   @tailrec
-  def guysInTree(trees: Seq[IntroductionTree], seen: Seq[String] = Nil): Seq[String] = {
-    val nextLevel = trees.flatMap(_.children)
-    val thisLevel = trees.map(_.name)
-    if(nextLevel.size > 0){
-      guysInTree(nextLevel, seen ++ thisLevel)
+  def edgesIntoTree(edges: Seq[(String, String)], assembledNodes: Seq[IntroductionTree] = Nil, seenNodeNames: Set[String] = Set()): Seq[IntroductionTree] = {
+    if(edges.size > 0){
+
+      val currentEdge = edges.head
+      val tailEdges = edges.tail
+
+      val parentName = currentEdge._1
+      val childName = currentEdge._2
+
+      val newSeenNodeNames = seenNodeNames ++ Set(parentName, childName)
+
+      val parentHasBeenSeen = seenNodeNames.contains(parentName)
+      val childHasBeenSeen = seenNodeNames.contains(childName)
+
+      /*
+      POSSIBILITIES
+       - BOTH PARENT AND CHILD HAVE NOT BEEN SEEN BEFORE
+          -> CREATE NEW PARENT NODE OF PARENT WITH ONE CHILD
+          -> ADD NEW NODE TO ASSEMBLED NODES
+       - THE PARENT HAS NOT BEEN SEEN BEFORE
+          -> FIND THE CHILD NODE IN ASSEMBLED NODES (MUST BE A ROOT GIVEN NO PARENT YET) AND ADD IT AS A CHILD OF NEW PARENT NODE
+          -> REPLACE ORIGINAL CHILD NODE IN ASSEMBLED NODES WITH PARENT NODE CONTAINING CHILD
+       - THE CHILD HAS NOT BEEN SEEN BEFORE
+          -> FIND THE PARENT NODE IN ASSEMBLED NODES (COULD BE ANYWHERE IN A PREEXISTING NODE) AND ADD CHILD TO IT
+          -> REPLACE TREE CONTAINING PARENT NODE IN ASSEMBLED NODES WITH NEW NODE CONTAINING PARENT W NEW CHILD
+       - THE CHILD AND PARENT HAVE BOTH BEEN SEEN BEFORE
+          -> FIND THE CHILD NODE IN ASSEMBLED NODES (MUST BE A ROOT), FIND THE PARENT NODE IN ASSEMBLED NODES (COULD BE ANYWHERE), AND ADD CHILD
+          -> REPLACE THE TREE CONTAINING PARENT NODE IN ASSEMBLED NODES WITH NEW NODE
+          -> REMOVE CHILD NODE FROM ASSEMBLED NODES
+
+     */
+
+      (parentHasBeenSeen, childHasBeenSeen) match {
+        case (false, false) =>
+          val newTree = IntroductionTree(parentName, Seq(IntroductionTree(childName, Nil)))
+          edgesIntoTree(tailEdges, assembledNodes :+ newTree, newSeenNodeNames)
+        case (false, true) =>
+          val newChildIndex = assembledNodes.indexWhere(_.name == childName)
+          val newChild = assembledNodes(newChildIndex)
+          val updatedTree = IntroductionTree(parentName, Seq(newChild))
+
+          val newTreeList = replaceElementInList(assembledNodes, updatedTree, newChildIndex)
+          edgesIntoTree(tailEdges, newTreeList, newSeenNodeNames)
+        case (true, false) =>
+          val childTree = IntroductionTree(childName, Nil)
+
+          val updatedTree = appendNodeToParent(assembledNodes, childTree, parentName)
+
+          val lookingFor = updatedTree.name
+          val nameIndex = assembledNodes.indexWhere(_.name == lookingFor)
+
+          val newTreeList = replaceElementInList(assembledNodes, updatedTree, nameIndex)
+          edgesIntoTree(tailEdges, newTreeList, newSeenNodeNames)
+        case (true, true) =>
+          val childTree = assembledNodes.find(_.name == childName).get
+          val withoutChild = assembledNodes.filter(_.name != childName)
+
+          val updatedTree = appendNodeToParent(withoutChild, childTree, parentName)
+
+          val lookingFor = updatedTree.name
+          val nameIndex = withoutChild.indexWhere(_.name == lookingFor)
+
+          val newTreeList = replaceElementInList(withoutChild, updatedTree, nameIndex)
+          edgesIntoTree(tailEdges, newTreeList, newSeenNodeNames)
+      }
+
     } else {
-      seen ++ thisLevel
+      assembledNodes
     }
   }
 
-  def whichTreeContainsParent(trees: Seq[IntroductionTree], parentName: String): IntroductionTree = {
-    val treeToContents = trees.map(t => t -> guysInTree(Seq(t)))
-    treeToContents.find(_._2.contains(parentName)).get._1
-  }
 
-  def amendTreeList(trees: Seq[IntroductionTree], fixedTree: IntroductionTree, atIndex: Int) = {
 
-    (trees.take(atIndex) :+ fixedTree) ++ trees.drop(atIndex + 1)
-  }
 
+  //RETURNS ALL DESCENDANT NODE NAMES THAT APPEAR IN A LIST OF NODES
   @tailrec
-  def repairLineage(lineageOldestFirst: Seq[IntroductionTree], currentTree: IntroductionTree): IntroductionTree = {
+  def nodeNamesInNode(nodes: Seq[IntroductionTree], seenNodeNames: Seq[String] = Nil): Seq[String] = {
+    val allChildrenNodes = nodes.flatMap(_.children)
+    val rootNodeNames = nodes.map(_.name)
+    if(allChildrenNodes.size > 0){
+      nodeNamesInNode(allChildrenNodes, seenNodeNames ++ rootNodeNames)
+    } else {
+      seenNodeNames ++ rootNodeNames
+    }
+  }
+
+  //IN A LIST OF NODES, FIND WHICH NODE HAS A GIVEN NODE NAME AS A DESCENDANT
+  def whichNodeContainsNodeNameDescendant(nodes: Seq[IntroductionTree], nodeNameToFind: String): IntroductionTree = {
+    val nodeToDescendants = nodes.map(t => t -> nodeNamesInNode(Seq(t)))
+    nodeToDescendants.find(_._2.contains(nodeNameToFind)).get._1
+  }
+
+  //REPLACE AN ELEMENT AT AN INDEX IN A LIST
+  def replaceElementInList[A](list: Seq[A], elementToSwapIn: A, atIndex: Int) = {
+    (list.take(atIndex) :+ elementToSwapIn) ++ list.drop(atIndex + 1)
+  }
+
+  //GIVEN A LIST OF ANCESTORS IN ORDER FROM FURTHEST TO CLOSEST, ADD NEW DESCENDANT OR REPLACE OLD VERSION OF A DESCENDANT WITH A NEW ONE UNTIL THE WHOLE LINEAGE IS FIXED
+  @tailrec
+  def repairLineage(lineageOldestFirst: Seq[IntroductionTree], fixedNode: IntroductionTree): IntroductionTree = {
     if(lineageOldestFirst.size > 0){
       val last = lineageOldestFirst.last
 
-      val optionalExistingChild = last.children.find(_.name == currentTree.name)
+      val optionalExistingChild = last.children.find(_.name == fixedNode.name)
+
+      //IF CHILD ALREADY EXISTS, REPLACE IT WITH NEW ONE, OTHERWISE ADD NEW ONE TO PARENT
       val newChildren = if(optionalExistingChild.isDefined){
-        val childIndex = last.children.indexWhere(_.name == currentTree.name)
-        amendTreeList(last.children, currentTree, childIndex)
+        val childIndex = last.children.indexWhere(_.name == fixedNode.name)
+        replaceElementInList(last.children, fixedNode, childIndex)
       } else {
-        last.children :+ currentTree
+        last.children :+ fixedNode
       }
 
       repairLineage(lineageOldestFirst.dropRight(1), last.copy(children = newChildren))
     } else {
-      currentTree
+      fixedNode
     }
   }
 
+  //APPEND A NODE TO ITS PARENT BY FINDING THE PARENT, AND THEN FIXING THE LINEAGE SO THAT THE OLDEST ANCESTOR CONTAINS THE NEW NODE AS A DESCENDANT
   @tailrec
-  def appendTreeToParent(trees: Seq[IntroductionTree], tree: IntroductionTree, parentName: String, searchParents: Seq[IntroductionTree] = Nil): IntroductionTree = {
+  def appendNodeToParent(nodes: Seq[IntroductionTree], childToAppend: IntroductionTree, parentName: String, lineage: Seq[IntroductionTree] = Nil): IntroductionTree = {
 
-    val treeWithParent = whichTreeContainsParent(trees, parentName)
+    val nodeWithParent = whichNodeContainsNodeNameDescendant(nodes, parentName)
 
-    if(treeWithParent.name == parentName){
-      val currentTree = treeWithParent.copy(children = treeWithParent.children :+tree)
-      repairLineage(searchParents, currentTree)
+    if(nodeWithParent.name == parentName){
+      val currentTree = nodeWithParent.copy(children = nodeWithParent.children :+childToAppend)
+      repairLineage(lineage, currentTree)
     } else {
-      appendTreeToParent(treeWithParent.children, tree, parentName, searchParents :+ treeWithParent)
+      appendNodeToParent(nodeWithParent.children, childToAppend, parentName, lineage :+ nodeWithParent)
     }
   }
 
+
   @tailrec
-  def edgesIntoTree(introductions: Seq[(String, String)], trees: Seq[IntroductionTree], seen: Set[String]): Seq[IntroductionTree] = {
-    if(introductions.size > 0){
-      val nextIntros = introductions.tail
+  def tryingThisWay(mapsOfIntros: Map[String, Seq[String]], currentTree: IntroductionTree, lineage: Seq[IntroductionTree] = Nil, seen: Set[String] = Set()): IntroductionTree = {
+      if (seen.contains(currentTree.name)) {
+        val children = currentTree.children
+        val unseenChild = children.find(c => !seen.contains(c.name))
+        if (unseenChild.isDefined) {
+          val nextNode = unseenChild.get
 
-      val intro = introductions.head
+          tryingThisWay(mapsOfIntros, nextNode, lineage :+ currentTree, seen)
+        } else {
+          if (lineage.size > 0) {
+            val lastLineage = lineage.last
 
-      val parent = intro._1
-      val child = intro._2
+            val childIndex = lastLineage.children.indexWhere(_.name == currentTree.name)
 
-      val newSeen = seen ++ Set(parent, child)
-      //trees.foreach(println)
-      //println("\na round")
-      //println("parent: "+parent)
-      //println("child: "+child)
+            val newChildren = replaceElementInList(lastLineage.children, currentTree, childIndex)
 
-      if(!seen.contains(parent) && !seen.contains(child)) {
-        val newTree = IntroductionTree(parent, Seq(IntroductionTree(child, Nil)))
-        edgesIntoTree(nextIntros, trees :+ newTree, newSeen)
+            //val updatedLastLineage = lastLineage.copy(children = lastLineage.children.filterNot(_.name == currentTree.name) :+ currentTree)
 
-      } else if (!seen.contains(parent)){
-        val newChildIndex = trees.indexWhere(_.name == child)
-        val newChild = trees(newChildIndex)
-        val updatedTree = IntroductionTree(parent, Seq(newChild))
+            val updatedLastLineage = lastLineage.copy(children = newChildren)
 
-        val newTreeList = amendTreeList(trees, updatedTree, newChildIndex)
-        edgesIntoTree(nextIntros, newTreeList, newSeen)
-
-      } else if (!seen.contains(child)) {
-        val childTree = IntroductionTree(child, Nil)
-
-        val updatedTree = appendTreeToParent(trees, childTree, parent)
-
-        val lookingFor = updatedTree.name
-        val nameIndex = trees.indexWhere(_.name == lookingFor)
-
-        val newTreeList = amendTreeList(trees, updatedTree, nameIndex)
-        edgesIntoTree(nextIntros, newTreeList, newSeen)
-
+            tryingThisWay(mapsOfIntros, updatedLastLineage, lineage.dropRight(1), seen)
+          } else {
+            currentTree
+          }
+        }
       } else {
-        val childTree = trees.find(_.name == child).get
-        val withoutChild = trees.filter(_.name != child)
 
-        val updatedTree = appendTreeToParent(withoutChild, childTree, parent)
-
-        val lookingFor = updatedTree.name
-        val nameIndex = withoutChild.indexWhere(_.name == lookingFor)
-
-        val newTreeList = amendTreeList(withoutChild, updatedTree, nameIndex)
-        edgesIntoTree(nextIntros, newTreeList, newSeen)
-
+        val children = mapsOfIntros.get(currentTree.name).getOrElse(Nil).map(c => IntroductionTree(c))
+        val newSeen = seen ++ Set(currentTree.name)
+        tryingThisWay(mapsOfIntros, currentTree.copy(children = children), lineage, newSeen)
       }
 
-    } else {
-      trees
-    }
   }
 
 }
