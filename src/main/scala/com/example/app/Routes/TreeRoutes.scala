@@ -24,6 +24,9 @@ trait TreeRoutes extends SlickRoutes with AuthenticationSupport{
     val context = requestObject.emails.getOrElse(myEmails)
 
     IntroductionTree.treeByRootAndContext(root, context)
+    //println("no problemo!")
+    //org.json4s.JObject()
+    //cat
   }
 
   post("/share") {

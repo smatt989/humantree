@@ -14,7 +14,11 @@ class EmailTable extends React.Component {
 
     this.props.getEmails();
 
-    setInterval(this.props.getEmails, 1000)
+    this.state = {interval: setInterval(this.props.getEmails, 1000)}
+  }
+
+  componentWillUnmount() {
+    this.setState({interval: clearInterval(this.state.interval)});
   }
 
   buildContent() {
