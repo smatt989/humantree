@@ -259,7 +259,17 @@ class Tree extends React.Component {
 
   render() {
     this.makeTree();
-    return <div id="tree-container"></div>
+
+    var loadingDiv = null
+    console.log(this.props.treeObj.get('tree'))
+    if(!this.props.treeObj.get('tree')) {
+        loadingDiv = <div><h2>loading...</h2></div>
+    }
+    if(this.props.treeObj.get('error')){
+        loadingDiv = <div><h2>error :(</h2></div>
+    }
+
+    return <div id="tree-container">{loadingDiv}</div>
   }
 }
 
