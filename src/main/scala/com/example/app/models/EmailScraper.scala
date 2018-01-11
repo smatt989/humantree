@@ -153,6 +153,8 @@ object EmailScraper {
     val df4 = DateTimeFormat.forPattern("d MMM yyyy HH:mm:ss Z")
     val df5 = DateTimeFormat.forPattern("EEE, d MMM yyyy HH:mm:ss Z ...")
 
+    "Mon, 10 Oct 2011 18:00:04 +0200 (CEST)"
+
     def dateParse(da: String) = {
       val d = da.replaceAll(" +", " ")
       try {
@@ -173,7 +175,8 @@ object EmailScraper {
                 case _ => try {
                     Some(DateTime.parse(d, df5))
                   } catch {
-                  case _ => throw new ParseException("COULD NOT PARSE: "+d, new Exception())
+                  case _ => //throw new ParseException("COULD NOT PARSE: "+d, new Exception())
+                    None
                 }
               }
             }
