@@ -246,6 +246,34 @@ export function startScrapingError(error) {
   };
 }
 
+export function startRescraping(email) {
+
+  const request = axios({
+    method: 'get',
+    url: `${domain}/rescrape/${email}`,
+    headers: authenticate()
+  });
+
+  return {
+    type: 'START_RESCRAPING',
+    payload: request
+  };
+}
+
+export function startRescrapingSuccess(loaded) {
+  return {
+    type: 'START_RESCRAPING_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function startRescrapingError(error) {
+  return {
+    type: 'START_RESCRAPING_ERROR',
+    error: error
+  };
+}
+
 export function shareTree(root) {
 
   const request = axios({

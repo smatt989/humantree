@@ -130,6 +130,18 @@ function startScrapingError(state, error) {
   return state.set('startScraping', Map({loading: false, error: Immutable.fromJS(error)}));
 }
 
+function startRescraping(state) {
+  return startScraping(state);
+}
+
+function startRescrapingSuccess(state) {
+  return startScrapingSuccess(state);
+}
+
+function startRescrapingError(state, error) {
+  return startScrapingError(state, error);
+}
+
 function shareTree(state) {
   return state.set('sharingKey', Map({key: null, error: null, loading: true}));
 }
@@ -210,6 +222,12 @@ export default function reducer(state = Map(), action) {
       return startScrapingSuccess(state, action.payload);
     case 'START_SCRAPING_ERROR':
       return startScrapingError(state, action.error);
+    case 'START_RESCRAPING':
+      return startRescraping(state);
+    case 'START_RESCRAPING_SUCCESS':
+      return startRescrapingSuccess(state, action.payload);
+    case 'START_RESCRAPING_ERROR':
+      return startRescrapingError(state, action.error);
     case 'SHARE_TREE':
       return shareTree(state);
     case 'SHARE_TREE_SUCCESS':

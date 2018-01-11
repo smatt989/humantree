@@ -5,7 +5,7 @@ import {
   Button,
   ButtonGroup
 } from 'react-bootstrap';
-import { getConnectedEmailAccounts, getConnectedEmailAccountsSuccess, getConnectedEmailAccountsError, startScraping, startScrapingSuccess, startScrapingError } from '../../actions.js';
+import { getConnectedEmailAccounts, getConnectedEmailAccountsSuccess, getConnectedEmailAccountsError, startScraping, startScrapingSuccess, startScrapingError, startRescraping, startRescrapingSuccess, startRescrapingError } from '../../actions.js';
 import EmailTableEntry from './EmailTableEntry.jsx';
 import {dispatchPattern} from '../../utilities.js';
 
@@ -32,6 +32,7 @@ class EmailTable extends React.Component {
     };
 
     const startScraping = this.props.startScraping
+    const startRescraping = this.props.startRescraping
 
     return <div className='container'>
         <h3>{this.props.tableHeader}</h3>
@@ -47,7 +48,7 @@ class EmailTable extends React.Component {
 		      <tbody>
 		        { emails
               ? emails.map(o =>
-		            <EmailTableEntry key={o.email} data={o} scrapeFunction={() => startScraping(o.email)} {...this.props} />)
+		            <EmailTableEntry key={o.email} data={o} scrapeFunction={() => startScraping(o.email)} rescrapeFunction={() => startRescraping(o.email)} {...this.props} />)
 		          : null
 		        }
 	      </tbody>
@@ -73,7 +74,8 @@ const mapStateToProps = state => {
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     getEmails: dispatchPattern(getConnectedEmailAccounts, getConnectedEmailAccountsSuccess, getConnectedEmailAccountsError),
-    startScraping: dispatchPattern(startScraping, startScrapingSuccess, startScrapingError)
+    startScraping: dispatchPattern(startScraping, startScrapingSuccess, startScrapingError),
+    startRescraping: dispatchPattern(startRescraping, startRescrapingSuccess, startRescrapingError)
   }
 }
 

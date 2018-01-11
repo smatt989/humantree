@@ -34,4 +34,8 @@ object Introduction extends SlickUUIDObject[IntroductionsRow, Introductions]{
     db.run(table.filter(a => a.receiverPersonEmail inSet emails).result)
   }
 
+  def removeAllForReceiverEmail(email: String) = {
+    db.run(table.filter(_.receiverPersonEmail === email).delete)
+  }
+
 }

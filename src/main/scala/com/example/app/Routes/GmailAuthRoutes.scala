@@ -2,6 +2,7 @@ package com.example.app.Routes
 
 import com.example.app.{AuthenticationSupport, SlickRoutes}
 import com.example.app.models._
+import org.apache.http.auth.AuthenticationException
 import org.scalatra.Ok
 
 import scala.concurrent.Await
@@ -30,17 +31,53 @@ trait GmailAuthRoutes extends SlickRoutes with AuthenticationSupport{
     val email = {params("email")}
 
     val userId = user.userAccountId
-    val refreshToken = Await.result(GmailAccessToken.fetchUserGmailAccessToken(userId, email), Duration.Inf)
 
-    //TODO: THIS DOESN'T ACTUALLY WORK...
-    if(refreshToken.isEmpty){
-      redirect("/auth?email="+email)
+    val authorized = GmailAuthorization.authenticateEmailAccessForUser(email, userId)
+
+    authorized match {
+      case false => throw new AuthenticationException()
+      case true =>
+        val refreshToken = Await.result(GmailAccessToken.fetchUserGmailAccessToken(userId, email), Duration.Inf)
+        if(refreshToken.isEmpty) {
+          redirect("/auth?email="+email)
+        }
+        contentType = formats("json")
+        EmailScraper.startAnActor(email, userId)
+
+        Ok{"200"}
     }
+  }
 
-    contentType = formats("json")
-    EmailScraper.startAnActor(email, userId)
+  get("/rescrape/:email") {
+    authenticate()
 
-    Ok{"200"}
+    val email = {params("email")}
+
+    val userId = user.userAccountId
+
+    val authorized = GmailAuthorization.authenticateEmailAccessForUser(email, userId)
+
+    authorized match {
+      case false => throw new AuthenticationException()
+      case true =>
+        val refreshToken = Await.result(GmailAccessToken.fetchUserGmailAccessToken(userId, email), Duration.Inf)
+        if(refreshToken.isEmpty) {
+          redirect("/auth?email="+email)
+        }
+        contentType = formats("json")
+
+        val progress = Await.result(GmailScrapeProgress.getByGmailConnectionId(refreshToken.get.gmailAccesTokenId), Duration.Inf)
+
+        progress.map(p => {
+          Await.result(GmailScrapeProgress.delete(p.gmailScrapeProgressId), Duration.Inf)
+        })
+
+        Await.result(Introduction.removeAllForReceiverEmail(email), Duration.Inf)
+
+        EmailScraper.startAnActor(email, userId, Some(0))
+
+        Ok{"200"}
+    }
   }
 
   get("/auth") {

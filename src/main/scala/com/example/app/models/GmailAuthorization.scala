@@ -123,4 +123,12 @@ object GmailAuthorization {
       .build()
   }
 
+  def authenticateEmailAccessForUser(email: String, userId: Int) = {
+    val emails = Await.result(GmailAccessToken.fetchAllForUser(userId), Duration.Inf)
+
+    println(emails)
+
+    emails.map(_.email).contains(email)
+  }
+
 }

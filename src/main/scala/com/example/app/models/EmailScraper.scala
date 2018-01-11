@@ -83,7 +83,7 @@ object EmailScraper {
   def userHeaderValueByName(headers: Seq[MessagePartHeader], key: String) = {
     val output = headerValueByName(headers, key)
     if(output.isDefined)
-      output.get.split(",").toSeq.flatMap(a => bracketRegex.findFirstIn(a)).map(_.toLowerCase)
+      emailRegex.findAllIn(output.get.toLowerCase()).toArray.toSeq.map(_.replaceAll("'", "")).distinct
       //bracketRegex.findAllIn(output.get).toArray.toSeq
       //emailRegex.findAllIn(output.get).toArray.toSeq
       //output.get.split(",").toSeq.map(_.trim)
@@ -93,8 +93,6 @@ object EmailScraper {
 
   def parseUsersFromMessage(message: Message) = {
     val headers = message.getPayload.getHeaders
-
-    println(headers)
 
     val from = userHeaderValueByName(headers, "From")
     val to = userHeaderValueByName(headers, "To")
@@ -154,7 +152,8 @@ object EmailScraper {
     val df4 = DateTimeFormat.forPattern("d MMM yyyy HH:mm:ss Z")
     val df5 = DateTimeFormat.forPattern("EEE, d MMM yyyy HH:mm:ss Z ...")
 
-    def dateParse(d: String) = {
+    def dateParse(da: String) = {
+      val d = da.replaceAll(" +", " ")
       try {
         Some(DateTime.parse(d, df))
       } catch {
@@ -170,11 +169,8 @@ object EmailScraper {
               case _ => try {
                 Some(DateTime.parse(d, df4))
               } catch {
-                case _ => try {
+                case _ =>
                   Some(DateTime.parse(d, df5))
-                } catch {
-                  case _ => None
-                }
               }
             }
           }
@@ -207,7 +203,7 @@ object EmailScraper {
           Some(userHeaderValue.head)
         } catch {
           case _ => {
-            println(message)
+            println("FROM ERROR")
             None
           }
         }
@@ -231,14 +227,16 @@ object EmailScraper {
               } else {
                 Some(IntroductionsRow(null, myEmail, myEmail, p, date.get.getMillis))
               }
-            } else
+            } else {
               None
+            }
           })
 
 
 
           introsToMake
         } else {
+          println(message)
           Nil
         }
       })
