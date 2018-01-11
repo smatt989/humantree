@@ -7,6 +7,7 @@ import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import akka.actor.{Actor, ActorSystem, Props}
 import com.example.app.EmailScrapeRequestObject
+import org.json4s.ParserUtil.ParseException
 
 import collection.JavaConversions._
 import scala.concurrent.Await
@@ -169,8 +170,11 @@ object EmailScraper {
               case _ => try {
                 Some(DateTime.parse(d, df4))
               } catch {
-                case _ =>
-                  Some(DateTime.parse(d, df5))
+                case _ => try {
+                    Some(DateTime.parse(d, df5))
+                  } catch {
+                  case _ => throw new ParseException("COULD NOT PARSE: "+d, new Exception())
+                }
               }
             }
           }
