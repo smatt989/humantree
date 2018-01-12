@@ -14,7 +14,7 @@ trait Tables {
   import slick.jdbc.{GetResult => GR}
 
   /** DDL for all tables. Call .create to execute. */
-  lazy val schema: profile.SchemaDescription = Array(DeviceTokens.schema, GmailAccessTokens.schema, GmailScrapeProgresses.schema, Introductions.schema, Migrations.schema, ShareableContexts.schema, UserAccounts.schema, UserConnections.schema, UserSessions.schema).reduceLeft(_ ++ _)
+  lazy val schema: profile.SchemaDescription = Array(DeviceTokens.schema, GmailAccessTokens.schema, GmailScrapeProgresses.schema, IdentityLinks.schema, Introductions.schema, Migrations.schema, NodeAnnotations.schema, ShareableContexts.schema, UserAccounts.schema, UserConnections.schema, UserSessions.schema).reduceLeft(_ ++ _)
   @deprecated("Use .schema instead of .ddl", "3.0")
   def ddl = schema
 
@@ -117,6 +117,41 @@ trait Tables {
   /** Collection-like TableQuery object for table GmailScrapeProgresses */
   lazy val GmailScrapeProgresses = new TableQuery(tag => new GmailScrapeProgresses(tag))
 
+  /** Entity class storing rows of table IdentityLinks
+   *  @param identityLinkId Database column IDENTITY_LINK_ID SqlType(VARCHAR), PrimaryKey
+   *  @param userId Database column USER_ID SqlType(INTEGER)
+   *  @param leftSide Database column LEFT_SIDE SqlType(VARCHAR)
+   *  @param rightSide Database column RIGHT_SIDE SqlType(VARCHAR)
+   *  @param linkName Database column LINK_NAME SqlType(VARCHAR), Default(None) */
+  case class IdentityLinksRow(identityLinkId: String, userId: Int, leftSide: String, rightSide: String, linkName: Option[String] = None)
+  /** GetResult implicit for fetching IdentityLinksRow objects using plain SQL queries */
+  implicit def GetResultIdentityLinksRow(implicit e0: GR[String], e1: GR[Int], e2: GR[Option[String]]): GR[IdentityLinksRow] = GR{
+    prs => import prs._
+    IdentityLinksRow.tupled((<<[String], <<[Int], <<[String], <<[String], <<?[String]))
+  }
+  /** Table description of table IDENTITY_LINKS. Objects of this class serve as prototypes for rows in queries. */
+  class IdentityLinks(_tableTag: Tag) extends Table[IdentityLinksRow](_tableTag, Some("BEE"), "IDENTITY_LINKS") {
+    def * = (identityLinkId, userId, leftSide, rightSide, linkName) <> (IdentityLinksRow.tupled, IdentityLinksRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = (Rep.Some(identityLinkId), Rep.Some(userId), Rep.Some(leftSide), Rep.Some(rightSide), linkName).shaped.<>({r=>import r._; _1.map(_=> IdentityLinksRow.tupled((_1.get, _2.get, _3.get, _4.get, _5)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column IDENTITY_LINK_ID SqlType(VARCHAR), PrimaryKey */
+    val identityLinkId: Rep[String] = column[String]("IDENTITY_LINK_ID", O.PrimaryKey)
+    /** Database column USER_ID SqlType(INTEGER) */
+    val userId: Rep[Int] = column[Int]("USER_ID")
+    /** Database column LEFT_SIDE SqlType(VARCHAR) */
+    val leftSide: Rep[String] = column[String]("LEFT_SIDE")
+    /** Database column RIGHT_SIDE SqlType(VARCHAR) */
+    val rightSide: Rep[String] = column[String]("RIGHT_SIDE")
+    /** Database column LINK_NAME SqlType(VARCHAR), Default(None) */
+    val linkName: Rep[Option[String]] = column[Option[String]]("LINK_NAME", O.Default(None))
+
+    /** Foreign key referencing UserAccounts (database name IDENTITY_LINK_TO_USERS_FK) */
+    lazy val userAccountsFk = foreignKey("IDENTITY_LINK_TO_USERS_FK", userId, UserAccounts)(r => r.userAccountId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+  }
+  /** Collection-like TableQuery object for table IdentityLinks */
+  lazy val IdentityLinks = new TableQuery(tag => new IdentityLinks(tag))
+
   /** Entity class storing rows of table Introductions
    *  @param introductionId Database column INTRODUCTION_ID SqlType(VARCHAR), PrimaryKey
    *  @param senderPersonEmail Database column SENDER_PERSON_EMAIL SqlType(VARCHAR)
@@ -168,6 +203,38 @@ trait Tables {
   }
   /** Collection-like TableQuery object for table Migrations */
   lazy val Migrations = new TableQuery(tag => new Migrations(tag))
+
+  /** Entity class storing rows of table NodeAnnotations
+   *  @param nodeAnnotationId Database column NODE_ANNOTATION_ID SqlType(VARCHAR), PrimaryKey
+   *  @param userId Database column USER_ID SqlType(INTEGER)
+   *  @param nodeName Database column NODE_NAME SqlType(VARCHAR)
+   *  @param annotation Database column ANNOTATION SqlType(VARCHAR) */
+  case class NodeAnnotationsRow(nodeAnnotationId: String, userId: Int, nodeName: String, annotation: String)
+  /** GetResult implicit for fetching NodeAnnotationsRow objects using plain SQL queries */
+  implicit def GetResultNodeAnnotationsRow(implicit e0: GR[String], e1: GR[Int]): GR[NodeAnnotationsRow] = GR{
+    prs => import prs._
+    NodeAnnotationsRow.tupled((<<[String], <<[Int], <<[String], <<[String]))
+  }
+  /** Table description of table NODE_ANNOTATIONS. Objects of this class serve as prototypes for rows in queries. */
+  class NodeAnnotations(_tableTag: Tag) extends Table[NodeAnnotationsRow](_tableTag, Some("BEE"), "NODE_ANNOTATIONS") {
+    def * = (nodeAnnotationId, userId, nodeName, annotation) <> (NodeAnnotationsRow.tupled, NodeAnnotationsRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = (Rep.Some(nodeAnnotationId), Rep.Some(userId), Rep.Some(nodeName), Rep.Some(annotation)).shaped.<>({r=>import r._; _1.map(_=> NodeAnnotationsRow.tupled((_1.get, _2.get, _3.get, _4.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column NODE_ANNOTATION_ID SqlType(VARCHAR), PrimaryKey */
+    val nodeAnnotationId: Rep[String] = column[String]("NODE_ANNOTATION_ID", O.PrimaryKey)
+    /** Database column USER_ID SqlType(INTEGER) */
+    val userId: Rep[Int] = column[Int]("USER_ID")
+    /** Database column NODE_NAME SqlType(VARCHAR) */
+    val nodeName: Rep[String] = column[String]("NODE_NAME")
+    /** Database column ANNOTATION SqlType(VARCHAR) */
+    val annotation: Rep[String] = column[String]("ANNOTATION")
+
+    /** Foreign key referencing UserAccounts (database name NODE_ANNOTATION_TO_USERS_FK) */
+    lazy val userAccountsFk = foreignKey("NODE_ANNOTATION_TO_USERS_FK", userId, UserAccounts)(r => r.userAccountId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+  }
+  /** Collection-like TableQuery object for table NodeAnnotations */
+  lazy val NodeAnnotations = new TableQuery(tag => new NodeAnnotations(tag))
 
   /** Entity class storing rows of table ShareableContexts
    *  @param shareableContextId Database column SHAREABLE_CONTEXT_ID SqlType(VARCHAR), PrimaryKey

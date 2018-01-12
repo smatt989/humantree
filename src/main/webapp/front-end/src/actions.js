@@ -335,3 +335,122 @@ export function getSharedTreeError(error) {
     error: error
   };
 }
+
+export function searchNames(query) {
+  return {
+    type: 'SEARCH_NAMES',
+    query: query
+  }
+}
+
+export function clearSearchNames() {
+  return {
+    type: 'CLEAR_SEARCH_NAMES'
+  }
+}
+
+export function startNewLink() {
+  return {
+    type: 'START_NEW_LINK'
+  }
+}
+
+export function updateNewLinkLeft(left) {
+  return {
+    type: 'UPDATE_NEW_LINK_LEFT',
+    left: left
+  }
+}
+
+export function updateNewLinkRight(right) {
+  return {
+    type: 'UPDATE_NEW_LINK_RIGHT',
+    right: right
+  }
+}
+
+export function createIdentityLink(left, right) {
+
+  const request = axios({
+    method: 'post',
+    url: `${domain}/links/create`,
+    headers: authenticate(),
+    data: {left: left, right: right}
+  });
+
+  return {
+    type: 'CREATE_IDENTITY_LINK',
+    payload: request
+  };
+}
+
+export function createIdentityLinkSuccess(loaded) {
+  return {
+    type: 'CREATE_IDENTITY_LINK_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function createIdentityLinkError(error) {
+  return {
+    type: 'CREATE_IDENTITY_LINK_ERROR',
+    error: error
+  };
+}
+
+export function getIdentityLinks() {
+
+  const request = axios({
+    method: 'get',
+    url: `${domain}/links`,
+    headers: authenticate()
+  });
+
+  return {
+    type: 'GET_IDENTITY_LINKS',
+    payload: request
+  };
+}
+
+export function getIdentityLinksSuccess(loaded) {
+  return {
+    type: 'GET_IDENTITY_LINKS_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function getIdentityLinksError(error) {
+  return {
+    type: 'GET_IDENTITY_LINKS_ERROR',
+    error: error
+  };
+}
+
+export function deleteIdentityLink(left, right) {
+
+  const request = axios({
+    method: 'post',
+    url: `${domain}/links/delete`,
+    headers: authenticate(),
+    data: {left: left, right: right}
+  });
+
+  return {
+    type: 'DELETE_IDENTITY_LINK',
+    payload: request
+  };
+}
+
+export function deleteIdentityLinkSuccess(loaded) {
+  return {
+    type: 'DELETE_IDENTITY_LINK_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function deleteIdentityLinkError(error) {
+  return {
+    type: 'DELETE_IDENTITY_LINK_ERROR',
+    error: error
+  };
+}

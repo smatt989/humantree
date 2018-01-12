@@ -1,6 +1,6 @@
 package com.example.app.models
 
-import com.example.app.db.Tables.IntroductionsRow
+import com.example.app.db.Tables.{IdentityLinksRow, IntroductionsRow}
 import org.joda.time.DateTime
 import org.json4s.JsonAST.{JArray, JObject, JString}
 
@@ -29,11 +29,15 @@ object IntroductionTree {
     })
   }
 
-  def treeByRootAndContext(root: String, emailContexts: Seq[String]) = {
-    val intros = introsByEmails(emailContexts).filter(a => a.introPersonEmail != a.senderPersonEmail)
-        .filter(_.introPersonEmail != root)
+  def treeByRootAndContext(root: String, emailContexts: Seq[String], links: Seq[IdentityLinksRow] = Nil) = {
+    val intros = introsByEmails(emailContexts)
 
-    val senderToIntros = intros.groupBy(_.senderPersonEmail).mapValues(_.map(_.introPersonEmail))
+    val renameMap = IdentityLink.nameMapFromLinks(links)
+
+    val renamedIntros = intros.map(intro => intro.copy(senderPersonEmail = renameMap.getOrElse(intro.senderPersonEmail, intro.senderPersonEmail), introPersonEmail = renameMap.getOrElse(intro.introPersonEmail, intro.introPersonEmail)))
+      .filter(a => a.introPersonEmail != a.senderPersonEmail && a.introPersonEmail != root)
+
+    val senderToIntros = renamedIntros.groupBy(_.senderPersonEmail).mapValues(_.map(_.introPersonEmail))
 
     Seq(tryingThisWay(senderToIntros, IntroductionTree(root)))
   }
@@ -76,7 +80,7 @@ object IntroductionTree {
         }
       } else {
 
-        val children = mapsOfIntros.get(currentTree.name).getOrElse(Nil).map(c => IntroductionTree(c))
+        val children = mapsOfIntros.get(currentTree.name).getOrElse(Nil).filterNot(a => seen.contains(a)).map(c => IntroductionTree(c))
         val newSeen = seen ++ Set(currentTree.name)
         tryingThisWay(mapsOfIntros, currentTree.copy(children = children), lineage, newSeen)
       }

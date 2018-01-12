@@ -155,7 +155,7 @@ object EmailScraper {
 
     "Mon, 10 Oct 2011 18:00:04 +0200 (CEST)"
 
-    def dateParse(da: String) = {
+    def dateParse(da: String, firstPass: Boolean = true): Option[DateTime] = {
       val d = da.replaceAll(" +", " ")
       try {
         Some(DateTime.parse(d, df))
@@ -175,8 +175,15 @@ object EmailScraper {
                 case _ => try {
                     Some(DateTime.parse(d, df5))
                   } catch {
-                  case _ => //throw new ParseException("COULD NOT PARSE: "+d, new Exception())
-                    None
+                  case _ => {
+                    if(firstPass) {
+                      println("trying another pass at date...")
+                      val tryWithoutEnd = d.split(" \\(").head
+                      dateParse(tryWithoutEnd, false)
+                    } else {
+                      throw new ParseException("COULD NOT PARSE: "+d, new Exception())
+                    }
+                  }
                 }
               }
             }
@@ -216,7 +223,7 @@ object EmailScraper {
         }
         val dateString = headerValueByName(message.getPayload().getHeaders(), "Date")
 
-        val date = dateString.flatMap(dateParse)
+        val date = dateString.flatMap(d => dateParse(d, true))
 
         if(date.isDefined && fromTry.isDefined && newPersons.size <= 10) {
           val from = fromTry.get
@@ -243,7 +250,11 @@ object EmailScraper {
 
           introsToMake
         } else {
+
           println(message)
+          println("DATE: "+date.isDefined)
+          println("FROM: "+fromTry.isDefined)
+          println("SIZE: "+newPersons.size)
           Nil
         }
       })

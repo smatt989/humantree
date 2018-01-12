@@ -20,10 +20,16 @@ function cleanState() {
     signupPassword: Map({ password: '' }),
     loginEmail: Map({ email: '' }),
     loginPassword: Map({ password: '' }),
-    getTree: Map({tree: null, error: null, loading: false}),
+    getTree: Map({tree: null, names: List.of(), error: null, loading: false}),
     getEmails: Map({emails: List.of(), error: null, loading: false}),
     startScraping: Map({loading: false, error: null}),
-    sharingKey: Map({key: null, error: null, loading: false})
+    sharingKey: Map({key: null, error: null, loading: false}),
+    searchResults: List.of(),
+    newLink: Map({left: null, right: null}),
+    createNewLink: Map({link: null, loading: false, error: null}),
+    getLinks: Map({links: List.of(), loading: false, error: null}),
+    deleteLink: Map({loading: false, error: null})
+    //TODO: ADD IDENITY LINK STUFF HERE
   });
 
   return cleanState;
@@ -95,15 +101,33 @@ function loginClearInputs(state) {
 }
 
 function getTree(state) {
-  return state.set('getTree', Map({tree: null, error: null, loading: true}));
+  return state.set('getTree', Map({tree: null, names: List.of(), error: null, loading: true}));
 }
 
 function getTreeSuccess(state, tree) {
-  return state.set('getTree', Map({tree: Immutable.fromJS(tree), error: null, loading: false}));
+
+  const immutableTree = Immutable.fromJS(tree)
+  const descendants = Immutable.fromJS(treeDescendants(tree, []))
+
+  return state.set('getTree', Map({tree: immutableTree, names: descendants, error: null, loading: false}));
 }
 
 function getTreeError(state, error) {
-  return state.set('getTree', Map({tree: null, error: Immutable.fromJS(error), loading: false}));
+  return state.set('getTree', Map({tree: null, names: List.of(), error: Immutable.fromJS(error), loading: false}));
+}
+
+function flatten(arrays) {
+    return [].concat.apply([], arrays);
+}
+
+function treeDescendants(trees, seenNames) {
+    const allChildrenNodes = flatten(trees.map(t => t.children)).filter(function(n){ return n != undefined })
+    const rootNodeNames = trees.map(t => t.name)
+    if(allChildrenNodes.length > 0){
+        return treeDescendants(allChildrenNodes, seenNames.concat(rootNodeNames))
+    } else {
+        return seenNames.concat(rootNodeNames)
+    }
 }
 
 function getConnectedEmailAccounts(state) {
@@ -168,6 +192,63 @@ function getSharedTreeSuccess(state, tree) {
 
 function getSharedTreeError(state, error) {
   return getTreeError(state, error);
+}
+
+function searchNames(state, query) {
+  const listOfNames = state.getIn(['getTree', 'names']).filter(a => a.includes(query));
+  return state.set('searchResults', listOfNames);
+}
+
+function clearSearchNames(state) {
+  return state.set('searchResults', List.of());
+}
+
+function startNewLink(state) {
+  return state.set('newLink', Map({left: null, right: null}));
+}
+
+function updateNewLinkLeft(state, left) {
+  return state.setIn(['newLink', 'left'], left);
+}
+
+function updateNewLinkRight(state, right) {
+  return state.setIn(['newLink', 'right'], right);
+}
+
+function createIdentityLink(state){
+  return state.set('createNewLink', Map({link: null, loading: true, error: false}));
+}
+
+function createIdentityLinkSuccess(state, link) {
+  return state.set('createNewLink', Map({link: Immutable.fromJS(link), loading: false, error: null}));
+}
+
+function createIdentityLinkError(state, error) {
+  return state.set('createNewLink', Map({link: null, loading: false, error: Immutable.fromJS(error)}));
+}
+
+function getIdentityLinks(state) {
+  return state.set('getLinks', Map({links: List.of(), loading: true, error: null}));
+}
+
+function getIdentityLinksSuccess(state, links) {
+  return state.set('getLinks', Map({links: Immutable.fromJS(links), loading: false, error: null}));
+}
+
+function getIdentityLinksError(state, error) {
+  return state.set('getLinks', Map({links: List.of(), loading: false, error: Immutable.fromJS(error)}));
+}
+
+function deleteIdentityLink(state) {
+  return state.set('deleteLink', Map({loading: true, error: null}));
+}
+
+function deleteIdentityLinkSuccess(state) {
+  return state.set('deleteLink', Map({loading: false, error: null}));
+}
+
+function deleteIdentityLinkError(state, error) {
+  return state.set('deleteLink', Map({loading: false, error: Immutable.fromJS(error)}));
 }
 
 export default function reducer(state = Map(), action) {
@@ -242,6 +323,34 @@ export default function reducer(state = Map(), action) {
       return getSharedTreeSuccess(state, action.payload);
     case 'GET_SHARED_TREE_ERROR':
       return getSharedTreeError(state, action.error);
+    case 'SEARCH_NAMES':
+      return searchNames(state, action.query);
+    case 'CLEAR_SEARCH_NAMES':
+      return clearSearchNames(state);
+    case 'START_NEW_LINK':
+      return startNewLink(state);
+    case 'UPDATE_NEW_LINK_LEFT':
+      return updateNewLinkLeft(state, action.left);
+    case 'UPDATE_NEW_LINK_RIGHT':
+      return updateNewLinkRight(state, action.right);
+    case 'CREATE_IDENTITY_LINK':
+      return createIdentityLink(state);
+    case 'CREATE_IDENTITY_LINK_SUCCESS':
+      return createIdentityLinkSuccess(state, action.payload);
+    case 'CREATE_IDENTITY_LINK_ERROR':
+      return createIdentityLinkError(state, action.error);
+    case 'GET_IDENTITY_LINKS':
+      return getIdentityLinks(state);
+    case 'GET_IDENTITY_LINKS_SUCCESS':
+      return getIdentityLinksSuccess(state, action.payload);
+    case 'GET_IDENTITY_LINKS_ERROR':
+      return getConnectedEmailAccountsError(state, action.error);
+    case 'DELETE_IDENTITY_LINK':
+      return deleteIdentityLink(state);
+    case 'DELETE_IDENTITY_LINK_SUCCESS':
+      return deleteIdentityLinkSuccess(state);
+    case 'DELETE_IDENTITY_LINK_ERROR':
+      return deleteIdentityLinkError(state, action.error);
     default:
       return state;
   }

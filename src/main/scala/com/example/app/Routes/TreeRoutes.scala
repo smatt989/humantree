@@ -23,10 +23,9 @@ trait TreeRoutes extends SlickRoutes with AuthenticationSupport{
     val root = requestObject.root.getOrElse(myEmails.head)
     val context = requestObject.emails.getOrElse(myEmails)
 
-    IntroductionTree.treeByRootAndContext(root, context)
-    //println("no problemo!")
-    //org.json4s.JObject()
-    //cat
+    val links = Await.result(IdentityLink.byUserId(userId), Duration.Inf)
+
+    IntroductionTree.treeByRootAndContext(root, context, links)
   }
 
   post("/share") {
@@ -56,7 +55,9 @@ trait TreeRoutes extends SlickRoutes with AuthenticationSupport{
     if(DateTime.now().getMillis - sharedContext.createdAtMillis < weekMillis){
       val contextEmails = Await.result(GmailAccessToken.allStatusesByUserId(sharedContext.userId), Duration.Inf).map(_._1.email)
 
-      IntroductionTree.treeByRootAndContext(sharedContext.treeRoot, contextEmails)
+      val links = Await.result(IdentityLink.byUserId(sharedContext.userId), Duration.Inf)
+
+      IntroductionTree.treeByRootAndContext(sharedContext.treeRoot, contextEmails, links)
     } else {
       throw new AuthenticationException("Invalid link")
     }

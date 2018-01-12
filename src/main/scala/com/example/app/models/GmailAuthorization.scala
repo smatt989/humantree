@@ -55,8 +55,6 @@ object GmailAuthorization {
 
     val authorizationUrl = flow.newAuthorizationUrl().setRedirectUri(REDIRECT_URI)
 
-    println("GMAIL AUTHORIZATION: "+authorizationUrl.toString)
-
     authorizationUrl.build()
   }
 
@@ -125,8 +123,6 @@ object GmailAuthorization {
 
   def authenticateEmailAccessForUser(email: String, userId: Int) = {
     val emails = Await.result(GmailAccessToken.fetchAllForUser(userId), Duration.Inf)
-
-    println(emails)
 
     emails.map(_.email).contains(email)
   }

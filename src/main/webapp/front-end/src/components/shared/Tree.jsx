@@ -266,7 +266,7 @@ class Tree extends React.Component {
         loadingDiv = <div><h2>loading...</h2></div>
     }
     if(this.props.treeObj.get('error')){
-        loadingDiv = <div><h2>error :(</h2></div>
+        loadingDiv = <div><h2>error</h2></div>
     }
 
     return <div id="tree-container">{loadingDiv}</div>

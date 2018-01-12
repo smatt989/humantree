@@ -13,6 +13,7 @@ import RegisterContainer from './account_forms/Register.jsx';
 import TreeContainer from './shared/Tree.jsx';
 import PrivateRouteContainer from './PrivateRoute.jsx';
 import Emails from './shared/Emails.jsx';
+import IdentityLinks from './shared/IdentityLinks.jsx';
 import TreePageContainer from './shared/TreePage.jsx';
 import Err from './Error.jsx';
 
@@ -30,6 +31,7 @@ export default class App extends React.Component {
           <PrivateRouteContainer path="/tree" component={TreePageContainer} />
           <Route path="/shared/:key/:root" component={TreePageContainer} />
           <Route path="/shared/:key" component={TreePageContainer} />
+          <PrivateRouteContainer path="/links" component={IdentityLinks} />
           <Route component={Err}/>
         </Switch>
       </div>
