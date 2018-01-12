@@ -16,9 +16,10 @@ import {EmailTableContainer} from './EmailTable.jsx';
 import TreeContainer from './Tree.jsx';
 import NavBar from '../NavBar.jsx';
 import { connect } from 'react-redux';
-import { shareTree, shareTreeSuccess, shareTreeError, removeKeyFromState, searchNames, clearSearchNames, startNewLink, updateNewLinkLeft, updateNewLinkRight, createIdentityLink, createIdentityLinkSuccess, createIdentityLinkError } from '../../actions.js';
+import { getTree, getTreeSuccess, getTreeError, getSharedTree, getSharedTreeSuccess, getSharedTreeError, shareTree, shareTreeSuccess, shareTreeError, removeKeyFromState, searchNames, clearSearchNames, startNewLink, updateNewLinkLeft, updateNewLinkRight, createIdentityLink, createIdentityLinkSuccess, createIdentityLinkError, getAnnotations, getAnnotationsSuccess, getAnnotationsError, getSharedAnnotations, getSharedAnnotationsSuccess, getSharedAnnotationsError } from '../../actions.js';
 import {dispatchPattern} from '../../utilities.js';
 import SearchBar from './SearchBar.jsx';
+import {HIDDEN} from '../../constants/annotations.js';
 
 
 class TreePage extends React.Component {
@@ -34,12 +35,39 @@ class TreePage extends React.Component {
   	this.updateNewLinkRight = this.updateNewLinkRight.bind(this);
   	this.setCreatingLink = this.setCreatingLink.bind(this);
   	this.submitLinkCreate = this.submitLinkCreate.bind(this);
+  	this.toggleEditingHidden = this.toggleEditingHidden.bind(this);
+  	this.getKey = this.getKey.bind(this);
+  	this.getTreeDecision = this.getTreeDecision.bind(this);
+  	this.doneEditingHidden = this.doneEditingHidden.bind(this);
 
   	this.state = {
   	    firstEmailFocus: true,
   	    secondEmailFocus: false,
-  	    creatingLink: false
+  	    creatingLink: false,
+  	    editingHidden: false
   	}
+  }
+
+  componentDidMount() {
+    this.getTreeDecision()
+  }
+
+  getTreeDecision() {
+    if(this.getKey()){
+        this.props.getSharedAnnotations(this.getKey(), HIDDEN)
+        this.props.getSharedTree(this.getKey())
+    } else {
+        this.props.getAnnotations(HIDDEN)
+        this.props.getTree();
+    }
+  }
+
+  getKey() {
+    return this.props.match.params.key || null
+  }
+
+  toggleEditingHidden(bool) {
+    this.setState({editingHidden: bool})
   }
 
   setCreatingLink(bool){
@@ -89,10 +117,17 @@ class TreePage extends React.Component {
     this.setCreatingLink(false)
   }
 
+  doneEditingHidden() {
+    this.toggleEditingHidden(false)
+    this.props.getAnnotations(HIDDEN)
+  }
+
 
   render() {
 
       const handleChange = this.handleChange
+
+      const toggleEditingHidden = this.toggleEditingHidden
 
       var leftEmail = <SearchBar placeholder="One email..." results={this.props.searchResults} onChangeFunction={handleChange} showList={this.state.firstEmailFocus} onFocusFunction={this.focusFirstEmail} onSelectFunction={this.updateNewLinkLeft} />;
       var rightEmail = <SearchBar placeholder="Another email..." results={this.props.searchResults} onChangeFunction={handleChange} showList={this.state.secondEmailFocus} onFocusFunction={this.focusSecondEmail} onSelectFunction={this.updateNewLinkRight} />
@@ -110,14 +145,31 @@ class TreePage extends React.Component {
 
       var ableToSubmitLink = !(selectedLeftEmail && selectedRightEmail)
 
+      var shareButton = <Button onClick={() => this.props.shareTree(this.getRoot())}>Share</Button>
+      var createLinkButton = <Button onClick={() => this.setCreatingLink(true)} >Link Emails</Button>
+      var editHiddenButton = <Button onClick={() => toggleEditingHidden(true)}>Edit Hidden</Button>
+
+      if(this.state.editingHidden){
+        editHiddenButton = <Button onClick={this.doneEditingHidden}>Done Editing Hidden</Button>
+        shareButton = null
+        createLinkButton = null
+      }
+
+      if(this.getKey()){
+        shareButton = null
+        createLinkButton = null
+        editHiddenButton = null
+      }
+
       return <Grid>
         <NavBar inverse={false}/>
         <div className='container'>
             <ButtonToolbar>
-                <Button onClick={() => this.props.shareTree(this.getRoot())}>Share</Button>
-                <Button onClick={() => this.setCreatingLink(true)} >Link Emails</Button>
+                {shareButton}
+                {createLinkButton}
+                {editHiddenButton}
             </ButtonToolbar>
-            <TreeContainer />
+            <TreeContainer editingHidden={this.state.editingHidden} />
         </div>
 
         <Modal className="static-modal" show={this.props.sharingKey.get('key') != null} >
@@ -159,7 +211,8 @@ const mapStateToProps = state => {
   return {
     sharingKey: state.get('sharingKey'),
     searchResults: state.get('searchResults'),
-    newLink: state.get('newLink')
+    newLink: state.get('newLink'),
+    annotationsList: state.get('getAnnotations')
   }
 }
 
@@ -184,7 +237,11 @@ const mapDispatchToProps = (dispatch, ownProps) => {
     },
     updateNewLinkRight: (right) => {
         return dispatch(updateNewLinkRight(right))
-    }
+    },
+    getTree: dispatchPattern(getTree, getTreeSuccess, getTreeError),
+    getSharedTree: dispatchPattern(getSharedTree, getSharedTreeSuccess, getSharedTreeError),
+    getAnnotations: dispatchPattern(getAnnotations, getAnnotationsSuccess, getAnnotationsError),
+    getSharedAnnotations: dispatchPattern(getSharedAnnotations, getSharedAnnotationsSuccess, getSharedAnnotationsError)
   }
 }
 

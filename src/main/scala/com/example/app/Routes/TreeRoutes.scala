@@ -41,10 +41,6 @@ trait TreeRoutes extends SlickRoutes with AuthenticationSupport{
     SharedContextRequestObject(saved.shareableContextId)
   }
 
-  val minuteMillis = 1000 * 60
-  val dayMillis = minuteMillis * 60 * 24
-  val weekMillis = dayMillis * 7
-
   post("/shared/:key") {
     contentType = formats("json")
 
@@ -52,7 +48,7 @@ trait TreeRoutes extends SlickRoutes with AuthenticationSupport{
 
     val sharedContext = Await.result(ShareableContext.byId(key), Duration.Inf)
 
-    if(DateTime.now().getMillis - sharedContext.createdAtMillis < weekMillis){
+    if(DateTime.now().getMillis - sharedContext.createdAtMillis < ShareableContext.weekMillis){
       val contextEmails = Await.result(GmailAccessToken.allStatusesByUserId(sharedContext.userId), Duration.Inf).map(_._1.email)
 
       val links = Await.result(IdentityLink.byUserId(sharedContext.userId), Duration.Inf)

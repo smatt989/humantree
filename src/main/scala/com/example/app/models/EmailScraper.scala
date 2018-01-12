@@ -67,47 +67,13 @@ object EmailScraper {
 
   val bracketRegex = "(?<=<).*(?=>)".r
 
-  def emailFromUserString(userString: String) = {
-    val regex = "(?<=<).*(?=>)".r
-    val trySecondPart = regex.findFirstIn(userString)
-
-    trySecondPart.getOrElse(userString).toLowerCase
-  }
-
-  def personFromUserString(userString: String) = {
-    val email = emailFromUserString(userString)
-    val name = userString.split("<").head.trim
-    //PersonsRow(null, email, name)
-  }
-
   //now just returns email addresses
   def userHeaderValueByName(headers: Seq[MessagePartHeader], key: String) = {
     val output = headerValueByName(headers, key)
     if(output.isDefined)
       emailRegex.findAllIn(output.get.toLowerCase()).toArray.toSeq.map(_.replaceAll("'", "")).distinct
-      //bracketRegex.findAllIn(output.get).toArray.toSeq
-      //emailRegex.findAllIn(output.get).toArray.toSeq
-      //output.get.split(",").toSeq.map(_.trim)
     else
       Nil
-  }
-
-  def parseUsersFromMessage(message: Message) = {
-    val headers = message.getPayload.getHeaders
-
-    val from = userHeaderValueByName(headers, "From")
-    val to = userHeaderValueByName(headers, "To")
-    val cc = userHeaderValueByName(headers, "cc")
-
-    (from ++ to ++ cc).toSet
-  }
-
-  def parseUsers(thread: GThread) = {
-    val messages = thread.getMessages.toList
-
-    messages.flatMap(message => {
-      parseUsersFromMessage(message)
-    }).toSet
   }
 
   def countNumbersInString(str: String) = {
@@ -115,19 +81,15 @@ object EmailScraper {
     r.findAllIn(str).toArray.toSeq.size
   }
 
-
   def basicProcess(myEmail: String, appUserId: Int, forceStartAt: Option[Int] = None) = {
 
     println("getting threads...")
 
     val credential = GmailAuthorization.authorize(appUserId, myEmail)
-
     val service = GmailAuthorization.makeService(credential)
-
     val connectedAccount = Await.result(GmailAccessToken.fetchUserGmailAccessToken(appUserId, myEmail), Duration.Inf).get
 
     val progress = GmailScrapeProgress.initializeOrDoNothing(connectedAccount.gmailAccesTokenId)
-
     GmailScrapeProgress.updateStatus(progress.gmailScrapeProgressId, GmailScrapeProgress.STATUS_SCRAPING)
 
     val toDrop = math.max(forceStartAt.getOrElse(progress.threadsProcessed) - 20, 0)
@@ -139,58 +101,11 @@ object EmailScraper {
 
     println(threadSize + " threads...")
 
-    //TODO: OK -- ONLY LOOKS AT CURRENT PARSING EMAIL, SHOULD NOT INTERFERE WITH MULTIPLE ACCOUNTS
     val introductions: Set[IntroductionsRow] = Await.result(Introduction.introductionsByReceiver(myEmail), Duration.Inf).toSet
 
     println(introductions.size + " introductions...")
 
     var knownEmails = scala.collection.mutable.Buffer(introductions.map(_.introPersonEmail).toSeq:_*)
-
-    val df = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss Z")
-    val df1 = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss z")
-    val df2 = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss Z (z)")
-    val df3 = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss Z (zZ)")
-    val df4 = DateTimeFormat.forPattern("d MMM yyyy HH:mm:ss Z")
-    val df5 = DateTimeFormat.forPattern("EEE, d MMM yyyy HH:mm:ss Z ...")
-
-    "Mon, 10 Oct 2011 18:00:04 +0200 (CEST)"
-
-    def dateParse(da: String, firstPass: Boolean = true): Option[DateTime] = {
-      val d = da.replaceAll(" +", " ")
-      try {
-        Some(DateTime.parse(d, df))
-      } catch {
-        case _ => try {
-          Some(DateTime.parse(d, df1))
-        } catch {
-          case _ => try {
-            Some(DateTime.parse(d, df2))
-          } catch {
-            case _ => try {
-              Some(DateTime.parse(d, df3))
-            } catch{
-              case _ => try {
-                Some(DateTime.parse(d, df4))
-              } catch {
-                case _ => try {
-                    Some(DateTime.parse(d, df5))
-                  } catch {
-                  case _ => {
-                    if(firstPass) {
-                      println("trying another pass at date...")
-                      val tryWithoutEnd = d.split(" \\(").head
-                      dateParse(tryWithoutEnd, false)
-                    } else {
-                      throw new ParseException("COULD NOT PARSE: "+d, new Exception())
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
 
     threads.drop(toDrop).zipWithIndex.map{case (t, i) => {
 
@@ -202,18 +117,19 @@ object EmailScraper {
       val messages = thread.getMessages.toList
 
       val intros = messages.flatMap(message => {
-        val messageUsers = parseUsersFromMessage(message)
-        //val personsByEmail = messageUsers.map(m => emailFromUserString(m))
 
-        val newPersons = messageUsers diff knownEmails.toSet
+        val headers = message.getPayload.getHeaders
+
+        val from = userHeaderValueByName(headers, "From")
+        val to = userHeaderValueByName(headers, "To")
+        val cc = userHeaderValueByName(headers, "cc")
+
+        val newPersons = (from ++ to ++ cc).distinct diff knownEmails.toSeq
 
         val fromTry = try {
 
-          val userHeaderValue = userHeaderValueByName(message.getPayload.getHeaders, "From")
-          //val em = emailFromUserString(userHeaderValue.head)
-          //println(userHeaderValue + " --> "+em+" ("+userHeaderValue.size+")")
+          val userHeaderValue = userHeaderValueByName(headers, "From")
 
-          //Some(em)
           Some(userHeaderValue.head)
         } catch {
           case _ => {
@@ -221,18 +137,16 @@ object EmailScraper {
             None
           }
         }
-        val dateString = headerValueByName(message.getPayload().getHeaders(), "Date")
 
-        val date = dateString.flatMap(d => dateParse(d, true))
+        val dateString = headerValueByName(message.getPayload().getHeaders(), "Date")
+        val date = dateString.flatMap(d => DateParserUtil.dateParse(d, true))
 
         if(date.isDefined && fromTry.isDefined && newPersons.size <= 10) {
           val from = fromTry.get
 
           print(newPersons.size + " new persons...")
-          //MUST FIGURE OUT THE WHOLE IDENTITY THING... COULD CONCEIVABLY SKIP AND JUST USE EMAIL ADDRESSES...
           val introsToMake = newPersons.flatMap(p => {
             if (p != myEmail && countNumbersInString(p) <= 8) {
-              //knownEmails = knownEmails +: p
 
               knownEmails +:= p
 
@@ -245,8 +159,6 @@ object EmailScraper {
               None
             }
           })
-
-
 
           introsToMake
         } else {
@@ -275,4 +187,50 @@ object EmailScraper {
     Await.result(GmailScrapeProgress.updateStatus(progress.gmailScrapeProgressId, GmailScrapeProgress.STATUS_STOPPED), Duration.Inf)
   }
 
+}
+
+object DateParserUtil {
+  val df = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss Z")
+  val df1 = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss z")
+  val df2 = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss Z (z)")
+  val df3 = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss Z (zZ)")
+  val df4 = DateTimeFormat.forPattern("d MMM yyyy HH:mm:ss Z")
+  val df5 = DateTimeFormat.forPattern("EEE, d MMM yyyy HH:mm:ss Z ...")
+
+  def dateParse(da: String, firstPass: Boolean = true): Option[DateTime] = {
+    val d = da.replaceAll(" +", " ")
+    try {
+      Some(DateTime.parse(d, df))
+    } catch {
+      case _ => try {
+        Some(DateTime.parse(d, df1))
+      } catch {
+        case _ => try {
+          Some(DateTime.parse(d, df2))
+        } catch {
+          case _ => try {
+            Some(DateTime.parse(d, df3))
+          } catch{
+            case _ => try {
+              Some(DateTime.parse(d, df4))
+            } catch {
+              case _ => try {
+                Some(DateTime.parse(d, df5))
+              } catch {
+                case _ => {
+                  if(firstPass) {
+                    println("trying another pass at date...")
+                    val tryWithoutEnd = d.split(" \\(").head
+                    dateParse(tryWithoutEnd, false)
+                  } else {
+                    throw new ParseException("COULD NOT PARSE: "+d, new Exception())
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }

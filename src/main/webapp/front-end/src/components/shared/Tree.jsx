@@ -1,15 +1,13 @@
 import React from 'react';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { getTree, getTreeSuccess, getTreeError, getSharedTree, getSharedTreeSuccess, getSharedTreeError } from '../../actions.js';
-import { Navbar, NavItem, Nav } from 'react-bootstrap';
+import { createAnnotation, createAnnotationSuccess, createAnnotationError, deleteAnnotation, deleteAnnotationSuccess, deleteAnnotationError } from '../../actions.js';
+import { Navbar, NavItem, Nav, Button } from 'react-bootstrap';
 import { LinkContainer } from 'react-router-bootstrap';
 import { withRouter } from "react-router-dom";
 import { Map, List, is } from 'immutable';
 import {dispatchPattern} from '../../utilities.js';
-
-//TODO: tree should go to specified root without HTTP request after getting FULL tree
-//TODO: include 'shared' route
+import {HIDDEN} from '../../constants/annotations.js';
 
 class Tree extends React.Component {
 
@@ -74,6 +72,23 @@ class Tree extends React.Component {
   }
 
   makeTree() {
+
+
+      const editingHidden = this.props.editingHidden
+
+      const createAnnotation = this.props.createAnnotation
+      const deleteAnnotation = this.props.deleteAnnotation
+
+      const annotationMap = this.props.annotations
+
+      function actionFromHiddenState(hidden) {
+        if(hidden){
+            return (name) => createAnnotation(name, HIDDEN)
+        } else {
+            return (name) => deleteAnnotation(name, HIDDEN)
+        }
+      }
+
       var treeData = this.props.treeObj.get('tree', null)
 
       if(!treeData){
@@ -133,6 +148,24 @@ class Tree extends React.Component {
         // Normalize for fixed-depth.
         nodes.forEach(function(d) { d.y = d.depth * 180; });
 
+
+        //MANUALLY KEEPING TRACK OF HIDDEN -- not great
+        nodes.forEach(function(d){
+            const label = annotationMap.get(d.name, null)
+            if(d.hidden == null && label){
+                d.hidden = true;
+            }
+        })
+
+        if(!editingHidden){
+            nodes.forEach(function(d){
+                if(annotationMap.get(d.name, null)){
+                    const indexOfSelf = d.parent.children.map(c => c.name).indexOf(d.name);
+                    d.parent.children.splice(indexOfSelf, 1)
+                }
+            })
+        }
+
         // Update the nodes…
         var node = svg.selectAll("g.node")
           .data(nodes, function(d) { return d.id || (d.id = ++i); });
@@ -145,7 +178,14 @@ class Tree extends React.Component {
 
         nodeEnter.append("circle")
           .attr("r", 1e-6)
-          .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+          .style("fill", function(d){
+            const color = d._children ? "lightsteelblue" : "#fff"
+            if(editingHidden){
+                return d.hidden ? "#333" : color
+            } else {
+                return color
+            }
+          })
 
         nodeEnter.append("text")
           .attr("x", function(d) { return d.children || d._children ? -13 : 13; })
@@ -161,7 +201,14 @@ class Tree extends React.Component {
 
         nodeUpdate.select("circle")
           .attr("r", 10)
-          .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+          .style("fill", function(d){
+            const color = d._children ? "lightsteelblue" : "#fff"
+            if(editingHidden){
+                return d.hidden ? "#333" : color
+            } else {
+                return color
+            }
+          })
 
         nodeUpdate.select("text")
           .style("fill-opacity", 1);
@@ -232,8 +279,13 @@ class Tree extends React.Component {
         //d._children = null;
         //}
         //update(d);
-
-        history.push(makeNodeUrl(d.name));
+        if(editingHidden){
+            d.hidden = d.hidden ? !d.hidden : true;
+            actionFromHiddenState(d.hidden)(d.name)
+            update(d)
+        } else {
+            history.push(makeNodeUrl(d.name));
+        }
       }
 
       function toggleAll(d) {
@@ -249,19 +301,10 @@ class Tree extends React.Component {
       update(root);
   }
 
-  componentDidMount() {
-    if(this.getKey()){
-        this.props.getSharedTree(this.getKey())
-    } else {
-        this.props.getTree();
-    }
-  }
-
   render() {
     this.makeTree();
 
     var loadingDiv = null
-    console.log(this.props.treeObj.get('tree'))
     if(!this.props.treeObj.get('tree')) {
         loadingDiv = <div><h2>loading...</h2></div>
     }
@@ -276,26 +319,14 @@ class Tree extends React.Component {
 const mapStateToProps = state => {
   return {
     treeObj: state.get('getTree'),
-    session: state.getIn(['login', 'session'])
+    annotations: state.getIn(['getAnnotationsMap', 'annotations'])
   };
 };
 
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
-
-    getTree: (root, emails) => {
-      return dispatch(getTree(root, emails))
-        .then(response => {
-            if(response.error) {
-                dispatch(getTreeError(response.payload.error));
-                return false;
-            }
-
-            dispatch(getTreeSuccess(response.payload.data));
-            return true;
-        })
-    },
-    getSharedTree: dispatchPattern(getSharedTree, getSharedTreeSuccess, getSharedTreeError)
+    createAnnotation: dispatchPattern(createAnnotation, createAnnotationSuccess, createAnnotationError),
+    deleteAnnotation: dispatchPattern(deleteAnnotation, deleteAnnotationSuccess, deleteAnnotationError)
   };
 };
 

@@ -454,3 +454,116 @@ export function deleteIdentityLinkError(error) {
     error: error
   };
 }
+
+export function createAnnotation(nodeName, annotation) {
+
+  const request = axios({
+    method: 'post',
+    url: `${domain}/annotations/create`,
+    headers: authenticate(),
+    data: {name:  nodeName, annotation: annotation}
+  });
+
+  return {
+    type: 'CREATE_ANNOTATION',
+    payload: request
+  };
+}
+
+export function createAnnotationSuccess(loaded) {
+  return {
+    type: 'CREATE_ANNOTATION_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function createAnnotationError(error) {
+  return {
+    type: 'CREATE_ANNOTATION_ERROR',
+    error: error
+  };
+}
+
+export function getAnnotations(annotation) {
+
+  const request = axios({
+    method: 'get',
+    url: `${domain}/annotations/${annotation}`,
+    headers: authenticate()
+  });
+
+  return {
+    type: 'GET_ANNOTATIONS',
+    payload: request
+  };
+}
+
+export function getAnnotationsSuccess(loaded) {
+  return {
+    type: 'GET_ANNOTATIONS_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function getAnnotationsError(error) {
+  return {
+    type: 'GET_ANNOTATIONS_ERROR',
+    error: error
+  };
+}
+
+export function getSharedAnnotations(key, annotation) {
+
+  const request = axios({
+    method: 'get',
+    url: `${domain}/shared/${key}/annotations/${annotation}`
+  });
+
+  return {
+    type: 'GET_SHARED_ANNOTATIONS',
+    payload: request
+  };
+}
+
+export function getSharedAnnotationsSuccess(loaded) {
+  return {
+    type: 'GET_SHARED_ANNOTATIONS_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function getSharedAnnotationsError(error) {
+  return {
+    type: 'GET_SHARED_ANNOTATIONS_ERROR',
+    error: error
+  };
+}
+
+export function deleteAnnotation(nodeName, annotation) {
+
+  const request = axios({
+    method: 'post',
+    url: `${domain}/annotations/delete`,
+    headers: authenticate(),
+    data: {name: nodeName, annotation: annotation}
+  });
+
+  return {
+    type: 'DELETE_ANNOTATION',
+    payload: request
+  };
+}
+
+export function deleteAnnotationSuccess(loaded) {
+  return {
+    type: 'DELETE_ANNOTATION_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function deleteAnnotationError(error) {
+  return {
+    type: 'DELETE_ANNOTATION_ERROR',
+    error: error
+  };
+}

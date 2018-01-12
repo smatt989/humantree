@@ -8,6 +8,11 @@ import org.joda.time.DateTime
   * Created by matt on 1/4/18.
   */
 object ShareableContext extends SlickUUIDObject[ShareableContextsRow, ShareableContexts] {
+
+  val minuteMillis = 1000 * 60
+  val dayMillis = minuteMillis * 60 * 24
+  val weekMillis = dayMillis * 7
+
   lazy val table = ShareableContexts
 
   def idFromRow(a: _root_.com.example.app.db.Tables.ShareableContextsRow) =

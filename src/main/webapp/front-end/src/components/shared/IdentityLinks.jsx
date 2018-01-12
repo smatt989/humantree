@@ -11,7 +11,6 @@ import { domain } from '../../actions.js';
 
 
 const IdentityLinks = (props) => {
-  console.log(domain)
   return <Grid>
     <NavBar inverse={false}/>
     <div className='container'>

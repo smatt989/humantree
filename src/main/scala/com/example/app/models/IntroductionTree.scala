@@ -17,22 +17,27 @@ object IntroductionTree {
   def introsByEmails(emails: Seq[String]) = {
     val allIntros = Await.result(Introduction.getAllForReceiverEmails(emails), Duration.Inf)
 
-    val distinct = allIntros.groupBy(_.introPersonEmail).mapValues(_.sortBy(_.introTimeMillis)).values.toSeq.map(_.head)
+    /*val distinct = */allIntros.groupBy(_.introPersonEmail).mapValues(_.sortBy(_.introTimeMillis)).values.toSeq.map(_.head)
 
     //val removeSelf = distinct.filterNot(a => emails.contains(a.introPersonEmail))
 
-    distinct.map(d => {
-      if(emails.contains(d.senderPersonEmail))
-        d.copy(senderPersonEmail = emails.head)
-      else
-        d
-    })
+    //distinct.map(d => {
+    //  if(emails.contains(d.senderPersonEmail))
+    //    d.copy(senderPersonEmail = emails.head)
+    //  else
+    //    d
+    //})
   }
 
   def treeByRootAndContext(root: String, emailContexts: Seq[String], links: Seq[IdentityLinksRow] = Nil) = {
     val intros = introsByEmails(emailContexts)
 
-    val renameMap = IdentityLink.nameMapFromLinks(links)
+    val tempLinks = if(emailContexts.size > 0)
+      emailContexts.tail.map(e => IdentityLinksRow(null, 0, emailContexts.head, e))
+    else
+      Nil
+
+    val renameMap = IdentityLink.nameMapFromLinks(tempLinks ++ links)
 
     val renamedIntros = intros.map(intro => intro.copy(senderPersonEmail = renameMap.getOrElse(intro.senderPersonEmail, intro.senderPersonEmail), introPersonEmail = renameMap.getOrElse(intro.introPersonEmail, intro.introPersonEmail)))
       .filter(a => a.introPersonEmail != a.senderPersonEmail && a.introPersonEmail != root)

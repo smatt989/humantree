@@ -28,8 +28,10 @@ function cleanState() {
     newLink: Map({left: null, right: null}),
     createNewLink: Map({link: null, loading: false, error: null}),
     getLinks: Map({links: List.of(), loading: false, error: null}),
-    deleteLink: Map({loading: false, error: null})
-    //TODO: ADD IDENITY LINK STUFF HERE
+    deleteLink: Map({loading: false, error: null}),
+    createAnnotation: Map({annotation: null, loading: false, error: null}),
+    getAnnotationsMap: Map({annotations: Map({}), loading: false, error: null}),
+    deleteAnnotation: Map({loading: false, error: null})
   });
 
   return cleanState;
@@ -251,6 +253,59 @@ function deleteIdentityLinkError(state, error) {
   return state.set('deleteLink', Map({loading: false, error: Immutable.fromJS(error)}));
 }
 
+function createAnnotation(state) {
+  return state.set('createAnnotation', Map({annotation: null, loading: true, error: null}));
+}
+
+function createAnnotationSuccess(state, annotation) {
+  return state.set('createAnnotation', Map({annotation: Immutable.fromJS(annotation), loading: false, error: null}));
+}
+
+function createAnnotationError(state, error) {
+  return state.set('createAnnotation', Map({annotation: null, loading: false, error: Immutable.fromJS(error)}));
+}
+
+function getAnnotations(state) {
+  return state.set('getAnnotationsMap', Map({annotations: Map({}), loading: true, error: null}));
+}
+
+function getAnnotationsSuccess(state, annotations) {
+
+  var obj = {}
+
+  annotations.forEach(a => obj[a.name] = a.annotation)
+
+  return state.set('getAnnotationsMap', Map({annotations: Immutable.fromJS(obj), loading: false, error: null}));
+}
+
+function getAnnotationsError(state, error) {
+  return state.set('getAnnotationsMap', Map({annotations: Map({}), loading: false, error: Immutable.fromJS(error)}));
+}
+
+function getSharedAnnotations(state) {
+  return getAnnotations(state);
+}
+
+function getSharedAnnotationsSuccess(state, annotations) {
+  return getAnnotationsSuccess(state, annotations);
+}
+
+function getSharedAnnotationsError(state, error) {
+  return getAnnotationsError(state, error);
+}
+
+function deleteAnnotation(state) {
+  return state.set('deleteAnnotation', Map({loading: true, error: null}));
+}
+
+function deleteAnnotationSuccess(state) {
+  return state.set('deleteAnnotation', Map({loading: false, error: null}));
+}
+
+function deleteAnnotationError(state, error) {
+  return state.set('deleteAnnotation', Map({loading: false, error: Immutable.fromJS(error)}));
+}
+
 export default function reducer(state = Map(), action) {
   switch (action.type) {
     case 'CLEAN_STATE':
@@ -351,6 +406,30 @@ export default function reducer(state = Map(), action) {
       return deleteIdentityLinkSuccess(state);
     case 'DELETE_IDENTITY_LINK_ERROR':
       return deleteIdentityLinkError(state, action.error);
+    case 'CREATE_ANNOTATION':
+      return createAnnotation(state);
+    case 'CREATE_ANNOTATION_SUCCESS':
+      return createAnnotationSuccess(state, action.payload);
+    case 'CREATE_ANNOTATION_ERROR':
+      return createAnnotationError(state, action.error);
+    case 'GET_ANNOTATIONS':
+      return getAnnotations(state);
+    case 'GET_ANNOTATIONS_SUCCESS':
+      return getAnnotationsSuccess(state, action.payload);
+    case 'GET_ANNOTATIONS_ERROR':
+      return getAnnotationsError(state, action.error);
+    case 'GET_SHARED_ANNOTATIONS':
+      return getSharedAnnotations(state);
+    case 'GET_SHARED_ANNOTATIONS_SUCCESS':
+      return getSharedAnnotationsSuccess(state, action.payload);
+    case 'GET_SHARED_ANNOTATIONS_ERROR':
+      return getSharedAnnotationsError(state, action.error);
+    case 'DELETE_ANNOTATION':
+      return deleteAnnotation(state);
+    case 'DELETE_ANNOTATION_SUCCESS':
+      return deleteAnnotationSuccess(state);
+    case 'DELETE_ANNOTATION_ERROR':
+      return deleteAnnotationError(state, action.error);
     default:
       return state;
   }
