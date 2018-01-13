@@ -190,15 +190,15 @@ object EmailScraper {
 }
 
 object DateParserUtil {
-  val df = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss Z")
-  val df1 = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss z")
-  val df2 = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss Z (z)")
-  val df3 = DateTimeFormat.forPattern("EEE, dd MMM yyyy HH:mm:ss Z (zZ)")
+  val df = DateTimeFormat.forPattern("EEE dd MMM yyyy HH:mm:ss Z")
+  val df1 = DateTimeFormat.forPattern("EEE dd MMM yyyy HH:mm:ss z")
+  val df2 = DateTimeFormat.forPattern("EEE dd MMM yyyy HH:mm:ss Z (z)")
+  val df3 = DateTimeFormat.forPattern("EEE dd MMM yyyy HH:mm:ss Z (zZ)")
   val df4 = DateTimeFormat.forPattern("d MMM yyyy HH:mm:ss Z")
-  val df5 = DateTimeFormat.forPattern("EEE, d MMM yyyy HH:mm:ss Z ...")
+  val df5 = DateTimeFormat.forPattern("EEE d MMM yyyy HH:mm:ss Z ...")
 
   def dateParse(da: String, firstPass: Boolean = true): Option[DateTime] = {
-    val d = da.replaceAll(" +", " ")
+    val d = da.replaceAll(" +", " ").replaceAll(",", "")
     try {
       Some(DateTime.parse(d, df))
     } catch {
