@@ -8,6 +8,7 @@ import {
 import { Grid, Row, Col } from 'react-bootstrap';
 import NavBarContainer from './NavBar.jsx';
 import Home from './Home.jsx';
+import PrivacyPolicy from './PrivacyPolicy.jsx';
 import LoginContainer from './account_forms/Login.jsx';
 import RegisterContainer from './account_forms/Register.jsx';
 import TreeContainer from './shared/Tree.jsx';
@@ -26,6 +27,7 @@ export default class App extends React.Component {
           <Route exact path="/login" component={LoginContainer}/>
           <Route exact path="/register" component={RegisterContainer}/>
           <Route exact path="/recover" component={LoginContainer}/>
+          <Route exact path="/privacy" component={PrivacyPolicy}/>
           <PrivateRouteContainer exact path="/emails" component={Emails}/>
           <PrivateRouteContainer path="/tree/:root" component={TreePageContainer} />
           <PrivateRouteContainer path="/tree" component={TreePageContainer} />
