@@ -13,24 +13,17 @@ case class IntroductionTree(name: String, children: Seq[IntroductionTree] = Nil)
 
 object IntroductionTree {
 
-  //TODO: HOW DOES CONTEXT WORK?  EMAIL?  USER ID?  USER ID --> EMAILS?
   def introsByEmails(emails: Seq[String]) = {
     val allIntros = Await.result(Introduction.getAllForReceiverEmails(emails), Duration.Inf)
 
-    /*val distinct = */allIntros.groupBy(_.introPersonEmail).mapValues(_.sortBy(_.introTimeMillis)).values.toSeq.map(_.head)
+    allIntros.groupBy(_.introPersonEmail).mapValues(_.sortBy(_.introTimeMillis)).values.toSeq.map(_.head)
 
-    //val removeSelf = distinct.filterNot(a => emails.contains(a.introPersonEmail))
-
-    //distinct.map(d => {
-    //  if(emails.contains(d.senderPersonEmail))
-    //    d.copy(senderPersonEmail = emails.head)
-    //  else
-    //    d
-    //})
   }
 
   def treeByRootAndContext(root: String, emailContexts: Seq[String], links: Seq[IdentityLinksRow] = Nil) = {
-    val intros = introsByEmails(emailContexts)
+    //val intros = introsByEmails(emailContexts)
+
+    val intros = Await.result(Introduction.getAllForReceiverEmails(emailContexts), Duration.Inf)
 
     val tempLinks = if(emailContexts.size > 0)
       emailContexts.tail.map(e => IdentityLinksRow(null, 0, emailContexts.head, e))
@@ -42,7 +35,9 @@ object IntroductionTree {
     val renamedIntros = intros.map(intro => intro.copy(senderPersonEmail = renameMap.getOrElse(intro.senderPersonEmail, intro.senderPersonEmail), introPersonEmail = renameMap.getOrElse(intro.introPersonEmail, intro.introPersonEmail)))
       .filter(a => a.introPersonEmail != a.senderPersonEmail && a.introPersonEmail != root)
 
-    val senderToIntros = renamedIntros.groupBy(_.senderPersonEmail).mapValues(_.map(_.introPersonEmail))
+    val distinctIntros = renamedIntros.groupBy(_.introPersonEmail).mapValues(_.sortBy(_.introTimeMillis)).values.toSeq.map(_.head)
+
+    val senderToIntros = distinctIntros.groupBy(_.senderPersonEmail).mapValues(_.map(_.introPersonEmail))
 
     Seq(tryingThisWay(senderToIntros, IntroductionTree(root)))
   }
