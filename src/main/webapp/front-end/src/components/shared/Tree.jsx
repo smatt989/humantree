@@ -129,7 +129,7 @@ class Tree extends React.Component {
         .attr("width", width + margin.right + margin.left)
         .attr("height", height + margin.top + margin.bottom)
         .append("g")
-        .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+        .attr("transform", "translate(" + (margin.left + 100) + "," + margin.top + ")");
 
       root = treeData;
       root.x0 = height / 2;
