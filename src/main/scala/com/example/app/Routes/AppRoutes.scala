@@ -1,6 +1,7 @@
 package com.example.app.Routes
 
 import com.example.app.{AuthenticationSupport, CookieStrategy, SlickRoutes}
+import org.scalatra.Ok
 
 trait AppRoutes extends SlickRoutes with AuthenticationSupport{
 
@@ -22,6 +23,10 @@ trait AppRoutes extends SlickRoutes with AuthenticationSupport{
           <script src="/front-end/dist/bundle.js"></script>
         </body>
       </html>
+  }
+
+  get("/google235447c74ae87b07.html ") {
+    Ok{"google-site-verification: google235447c74ae87b07.html"}
   }
 
 }
