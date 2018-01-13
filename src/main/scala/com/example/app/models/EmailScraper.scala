@@ -196,6 +196,9 @@ object DateParserUtil {
   val df3 = DateTimeFormat.forPattern("EEE dd MMM yyyy HH:mm:ss Z (zZ)")
   val df4 = DateTimeFormat.forPattern("d MMM yyyy HH:mm:ss Z")
   val df5 = DateTimeFormat.forPattern("EEE d MMM yyyy HH:mm:ss Z ...")
+  val df6 = DateTimeFormat.forPattern("EEE MMM dd yyyy HH:mm:ss Z")
+
+  "Thu Mar 16 2017 23:45:02 -0400"
 
   def dateParse(da: String, firstPass: Boolean = true): Option[DateTime] = {
     val d = da.replaceAll(" +", " ").replaceAll(",", "")
@@ -217,13 +220,17 @@ object DateParserUtil {
               case _ => try {
                 Some(DateTime.parse(d, df5))
               } catch {
-                case _ => {
-                  if(firstPass) {
-                    println("trying another pass at date...")
-                    val tryWithoutEnd = d.split(" \\(").head
-                    dateParse(tryWithoutEnd, false)
-                  } else {
-                    throw new ParseException("COULD NOT PARSE: "+d, new Exception())
+                case _ => try {
+                  Some(DateTime.parse(d, df6))
+                } catch {
+                  case _ => {
+                    if(firstPass) {
+                      println("trying another pass at date...")
+                      val tryWithoutEnd = d.split(" \\(").head
+                      dateParse(tryWithoutEnd, false)
+                    } else {
+                      throw new ParseException("COULD NOT PARSE: "+d, new Exception())
+                    }
                   }
                 }
               }
