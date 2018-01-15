@@ -21,19 +21,15 @@ object IntroductionTree {
   }
 
   def treeByRootAndContext(root: String, emailContexts: Seq[String], links: Seq[IdentityLinksRow] = Nil) = {
-    //val intros = introsByEmails(emailContexts)
 
     val intros = Await.result(Introduction.getAllForReceiverEmails(emailContexts), Duration.Inf)
 
-    val tempLinks = if(emailContexts.size > 0)
-      emailContexts.tail.map(e => IdentityLinksRow(null, 0, emailContexts.head, e))
-    else
-      Nil
+    treeFromIntroductions(root, emailContexts, intros, links)
+  }
 
-    val renameMap = IdentityLink.nameMapFromLinks(tempLinks ++ links)
+  def treeFromIntroductions(root: String, emailContexts: Seq[String], intros: Seq[IntroductionsRow], links: Seq[IdentityLinksRow] = Nil) = {
 
-    val renamedIntros = intros.map(intro => intro.copy(senderPersonEmail = renameMap.getOrElse(intro.senderPersonEmail, intro.senderPersonEmail), introPersonEmail = renameMap.getOrElse(intro.introPersonEmail, intro.introPersonEmail)))
-      .filter(a => a.introPersonEmail != a.senderPersonEmail && a.introPersonEmail != root)
+    val renamedIntros = renameIntros(intros, emailContexts, links)
 
     val distinctIntros = renamedIntros.groupBy(_.introPersonEmail).mapValues(_.sortBy(_.introTimeMillis)).values.toSeq.map(_.head)
 
@@ -42,8 +38,21 @@ object IntroductionTree {
     Seq(tryingThisWay(senderToIntros, IntroductionTree(root)))
   }
 
+  def renameMapFromLinksAndContext(context: Seq[String], links: Seq[IdentityLinksRow]) = {
+    val tempLinks = if(context.size > 0)
+      context.tail.map(e => IdentityLinksRow(null, 0, context.head, e))
+    else
+      Nil
 
+    IdentityLink.nameMapFromLinks(tempLinks ++ links)
+  }
 
+  def renameIntros(intros: Seq[IntroductionsRow], emails: Seq[String], links: Seq[IdentityLinksRow]) = {
+    val renameMap = renameMapFromLinksAndContext(emails, links)
+
+    intros.map(intro => intro.copy(senderPersonEmail = renameMap.getOrElse(intro.senderPersonEmail, intro.senderPersonEmail), introPersonEmail = renameMap.getOrElse(intro.introPersonEmail, intro.introPersonEmail)))
+      .filter(a => a.introPersonEmail != a.senderPersonEmail && !emails.contains(a.introPersonEmail))
+  }
 
   //REPLACE AN ELEMENT AT AN INDEX IN A LIST
   def replaceElementInList[A](list: Seq[A], elementToSwapIn: A, atIndex: Int) = {
@@ -85,6 +94,18 @@ object IntroductionTree {
         tryingThisWay(mapsOfIntros, currentTree.copy(children = children), lineage, newSeen)
       }
 
+  }
+
+  @tailrec
+  def treeDescendants(trees: Seq[IntroductionTree], seenNames: Seq[String] = Nil): Seq[String] = {
+    val allChildrenNodes = trees.flatMap(t => t.children)
+    val rootNodeNames = trees.map(t => t.name)
+    val newSeen = seenNames ++ rootNodeNames
+    if(allChildrenNodes.nonEmpty){
+      treeDescendants(allChildrenNodes, newSeen)
+    } else {
+      newSeen
+    }
   }
 
 }

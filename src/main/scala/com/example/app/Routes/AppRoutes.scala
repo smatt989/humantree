@@ -11,6 +11,7 @@ trait AppRoutes extends SlickRoutes with AuthenticationSupport{
 
     <html>
       <head>
+        <link rel='stylesheet' href='/front-end/dist/react-datepicker.min.css' />
         <link rel="stylesheet" href="/front-end/dist/main.css" />
         </head>
         <body>
@@ -20,6 +21,7 @@ trait AppRoutes extends SlickRoutes with AuthenticationSupport{
             CONFIG.auth = {authenticated.isDefined};
           </script>
           <script src="https://d3js.org/d3.v3.min.js"></script>
+          <script src='https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js'></script>
           <script src="/front-end/dist/bundle.js"></script>
         </body>
       </html>

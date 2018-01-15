@@ -567,3 +567,59 @@ export function deleteAnnotationError(error) {
     error: error
   };
 }
+
+export function getIntroductions(sinceMillis) {
+
+  const request = axios({
+    method: 'get',
+    url: `${domain}/introductions?since=${sinceMillis}`,
+    headers: authenticate()
+  });
+
+  return {
+    type: 'GET_INTRODUCTIONS',
+    payload: request
+  };
+}
+
+export function getIntroductionsSuccess(loaded) {
+  return {
+    type: 'GET_INTRODUCTIONS_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function getIntroductionsError(error) {
+  return {
+    type: 'GET_INTRODUCTIONS_ERROR',
+    error: error
+  };
+}
+
+export function getConnectors(sinceMillis) {
+
+  const request = axios({
+    method: 'get',
+    url: `${domain}/connectors?since=${sinceMillis}`,
+    headers: authenticate()
+  });
+
+  return {
+    type: 'GET_CONNECTORS',
+    payload: request
+  };
+}
+
+export function getConnectorsSuccess(loaded) {
+  return {
+    type: 'GET_CONNECTORS_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function getConnectorsError(error) {
+  return {
+    type: 'GET_CONNECTORS_ERROR',
+    error: error
+  };
+}

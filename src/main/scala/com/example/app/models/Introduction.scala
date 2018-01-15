@@ -38,4 +38,12 @@ object Introduction extends SlickUUIDObject[IntroductionsRow, Introductions]{
     db.run(table.filter(_.receiverPersonEmail === email).delete)
   }
 
+  def introductionsSince(emails: Seq[String], sinceMillis: Long) = {
+    db.run(table.filter(a => a.receiverPersonEmail.inSet(emails) && a.introTimeMillis > sinceMillis).result)
+  }
+
 }
+
+case class IntroductionJson(sender: Option[String], receiver: String, intro: String, dateMillis: Long)
+
+case class ConnectorSummary(name: String, introductions: Int)

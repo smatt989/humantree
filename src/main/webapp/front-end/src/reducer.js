@@ -31,7 +31,9 @@ function cleanState() {
     deleteLink: Map({loading: false, error: null}),
     createAnnotation: Map({annotation: null, loading: false, error: null}),
     getAnnotationsMap: Map({annotations: Map({}), loading: false, error: null}),
-    deleteAnnotation: Map({loading: false, error: null})
+    deleteAnnotation: Map({loading: false, error: null}),
+    getIntroductions: Map({introductions: List.of(), loading: false, error: null}),
+    getConnectors: Map({connectors: List.of(), loading: false, error: null})
   });
 
   return cleanState;
@@ -306,6 +308,30 @@ function deleteAnnotationError(state, error) {
   return state.set('deleteAnnotation', Map({loading: false, error: Immutable.fromJS(error)}));
 }
 
+function getIntroductions(state) {
+  return state.set('getIntroductions', Map({introductions: List.of(), loading: true, error: null}));
+}
+
+function getIntroductionsSuccess(state, introductions) {
+  return state.set('getIntroductions', Map({introductions: Immutable.fromJS(introductions), loading: false, error: null}));
+}
+
+function getIntroductionsError(state, error) {
+  return state.set('getIntroductions', Map({introductions: List.of(), loading: false, error: Immutable.fromJS(error)}));
+}
+
+function getConnectors(state) {
+  return state.set('getConnectors', Map({connectors: List.of(), loading: true, error: null}));
+}
+
+function getConnectorsSuccess(state, connectors) {
+  return state.set('getConnectors', Map({connectors: Immutable.fromJS(connectors), loading: false, error: null}));
+}
+
+function getConnectorsError(state, error) {
+  return state.set('getConnectors', Map({connectors: List.of(), loading: false, error: Immutable.fromJS(error)}));
+}
+
 export default function reducer(state = Map(), action) {
   switch (action.type) {
     case 'CLEAN_STATE':
@@ -430,6 +456,18 @@ export default function reducer(state = Map(), action) {
       return deleteAnnotationSuccess(state);
     case 'DELETE_ANNOTATION_ERROR':
       return deleteAnnotationError(state, action.error);
+    case 'GET_INTRODUCTIONS':
+      return getIntroductions(state);
+    case 'GET_INTRODUCTIONS_SUCCESS':
+      return getIntroductionsSuccess(state, action.payload);
+    case 'GET_INTRODUCTIONS_ERROR':
+      return getIntroductionsError(state, action.error);
+    case 'GET_CONNECTORS':
+      return getConnectors(state);
+    case 'GET_CONNECTORS_SUCCESS':
+      return getConnectorsSuccess(state, action.payload);
+    case 'GET_CONNECTORS_ERROR':
+      return getConnectorsError(state, action.error);
     default:
       return state;
   }
