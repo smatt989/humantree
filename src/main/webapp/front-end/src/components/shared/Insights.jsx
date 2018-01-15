@@ -51,7 +51,7 @@ class Insights extends React.Component {
                <NavBar inverse={false}/>
                <div className='container'>
                  <PageHeader>
-                   Insights as of
+                   Insights since
                    <DatePicker selected={this.state.since} onChange={this.handleChangeDate} />
                  </PageHeader>
                  <div className="col-md-6" >
