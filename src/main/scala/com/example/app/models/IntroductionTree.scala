@@ -8,7 +8,7 @@ import scala.annotation.tailrec
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 
-case class IntroductionTree(name: String, children: Seq[IntroductionTree] = Nil)
+case class IntroductionTree(name: String, dateMillis: Long, children: Seq[IntroductionTree] = Nil)
 
 
 object IntroductionTree {
@@ -33,9 +33,9 @@ object IntroductionTree {
 
     val distinctIntros = renamedIntros.groupBy(_.introPersonEmail).mapValues(_.sortBy(_.introTimeMillis)).values.toSeq.map(_.head)
 
-    val senderToIntros = distinctIntros.groupBy(_.senderPersonEmail).mapValues(_.map(_.introPersonEmail))
+    val senderToIntros = distinctIntros.groupBy(_.senderPersonEmail)
 
-    Seq(tryingThisWay(senderToIntros, IntroductionTree(root)))
+    Seq(tryingThisWay(senderToIntros, IntroductionTree(root, DateTime.now().getMillis)))
   }
 
   def renameMapFromLinksAndContext(context: Seq[String], links: Seq[IdentityLinksRow]) = {
@@ -61,7 +61,7 @@ object IntroductionTree {
 
   //CAN PROBABLY DO THIS EVEN FASTER BY TRACKING CHILDREN INSTEAD OF "SEEN" AND USING THE .FIND ON CURRENT CHILDREN?
   @tailrec
-  def tryingThisWay(mapsOfIntros: Map[String, Seq[String]], currentTree: IntroductionTree, lineage: Seq[IntroductionTree] = Nil, seen: Set[String] = Set()): IntroductionTree = {
+  def tryingThisWay(mapsOfIntros: Map[String, Seq[IntroductionsRow]], currentTree: IntroductionTree, lineage: Seq[IntroductionTree] = Nil, seen: Set[String] = Set()): IntroductionTree = {
       if (seen.contains(currentTree.name)) {
         val children = currentTree.children
         //BET WE CAN DO BETTER THAN THIS:
@@ -89,11 +89,39 @@ object IntroductionTree {
         }
       } else {
 
-        val children = mapsOfIntros.get(currentTree.name).getOrElse(Nil).filterNot(a => seen.contains(a)).map(c => IntroductionTree(c))
+        val children = mapsOfIntros.get(currentTree.name).getOrElse(Nil).filterNot(a => seen.contains(a.introPersonEmail)).map(c => IntroductionTree(c.introPersonEmail, c.introTimeMillis))
         val newSeen = seen ++ Set(currentTree.name)
         tryingThisWay(mapsOfIntros, currentTree.copy(children = children), lineage, newSeen)
       }
 
+  }
+
+  @tailrec
+  def bloop(tree: IntroductionTree, since: Long, lineage: Seq[IntroductionTree] = Nil, seen: Set[String] = Set()): IntroductionTree = {
+    if(seen.contains(tree.name)) {
+      val unseenChild = tree.children.find(c => !seen.contains(c.name))
+      if(unseenChild.isDefined){
+        val nextNode = unseenChild.get
+        bloop(nextNode, since, lineage :+ tree, seen)
+      } else {
+        val newChildren = tree.children.filter(child => child.children.size > 0 || child.dateMillis > since)
+        val newTree = tree.copy(children = newChildren)
+
+        if(lineage.size > 0){
+          val lastLineage = lineage.last
+          val treeIndex = lastLineage.children.indexWhere(_.name == newTree.name)
+          val lastLineageNewChildren = replaceElementInList(lastLineage.children, newTree, treeIndex)
+
+          val updatedLastedLineage = lastLineage.copy(children = lastLineageNewChildren)
+
+          bloop(updatedLastedLineage, since, lineage.dropRight(1), seen)
+        } else {
+          newTree
+        }
+      }
+    } else {
+      bloop(tree, since, lineage, seen ++ Set(tree.name))
+    }
   }
 
   @tailrec

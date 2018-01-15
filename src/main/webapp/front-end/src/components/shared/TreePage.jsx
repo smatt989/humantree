@@ -20,6 +20,7 @@ import { getTree, getTreeSuccess, getTreeError, getSharedTree, getSharedTreeSucc
 import {dispatchPattern} from '../../utilities.js';
 import SearchBar from './SearchBar.jsx';
 import {HIDDEN} from '../../constants/annotations.js';
+import DatePicker from 'react-datepicker';
 
 
 class TreePage extends React.Component {
@@ -39,16 +40,41 @@ class TreePage extends React.Component {
   	this.getKey = this.getKey.bind(this);
   	this.getTreeDecision = this.getTreeDecision.bind(this);
   	this.doneEditingHidden = this.doneEditingHidden.bind(this);
+  	this.handleChangeDate = this.handleChangeDate.bind(this);
+  	this.getSince = this.getSince.bind(this);
+  	this.readUrlParams = this.readUrlParams.bind(this);
 
   	this.state = {
   	    firstEmailFocus: true,
   	    secondEmailFocus: false,
   	    creatingLink: false,
-  	    editingHidden: false
+  	    editingHidden: false,
+  	    dateFilterAdded: false,
+  	    since: moment().subtract(14, "days")
   	}
   }
 
+  getSince() {
+     var params = this.readUrlParams()
+     return params["since"]
+  }
+
+  readUrlParams() {
+     var paramObj = {}
+     const optionalParams = this.props.location.search.split("?")[1]
+     if(optionalParams){
+         const pairs = optionalParams.split("&")
+         pairs.forEach(p => paramObj[p.split("=")[0]] = p.split("=")[1])
+     }
+     return paramObj
+  }
+
   componentDidMount() {
+    var since = this.getSince()
+    if(since){
+        this.setState({since: since})
+    }
+
     this.getTreeDecision()
   }
 
@@ -88,7 +114,7 @@ class TreePage extends React.Component {
   }
 
   getRoot() {
-    return this.props.match.params.root || null
+    return this.props.match.params.root || this.props.tree.getIn([0, 'name'])
   }
 
   handleChange(e) {
@@ -122,6 +148,10 @@ class TreePage extends React.Component {
     this.props.getAnnotations(HIDDEN)
   }
 
+  handleChangeDate(a) {
+    this.setState({since: a})
+  }
+
 
   render() {
 
@@ -148,6 +178,8 @@ class TreePage extends React.Component {
       var shareButton = <Button onClick={() => this.props.shareTree(this.getRoot())}>Share</Button>
       var createLinkButton = <Button onClick={() => this.setCreatingLink(true)} >Link Emails</Button>
       var editHiddenButton = <Button onClick={() => toggleEditingHidden(true)}>Edit Hidden</Button>
+      var addDateFilterButton = <Button onClick={() => this.setState({dateFilterAdded:true})}>Add Date Filter</Button>
+      var dateFilter = null
 
       if(this.state.editingHidden){
         editHiddenButton = <Button onClick={this.doneEditingHidden}>Done Editing Hidden</Button>
@@ -155,10 +187,26 @@ class TreePage extends React.Component {
         createLinkButton = null
       }
 
+      if(this.state.dateFilterAdded){
+        addDateFilterButton = <Button onClick={() => this.setState({dateFilterAdded:false})}>Remove Date Filter</Button>
+      }
+
       if(this.getKey()){
         shareButton = null
         createLinkButton = null
         editHiddenButton = null
+        addDateFilterButton = null
+      }
+
+      if(addDateFilterButton && this.state.dateFilterAdded) {
+        dateFilter = <DatePicker selected={this.state.since} onChange={this.handleChangeDate} />
+      }
+
+      var treeSince = this.state.dateFilterAdded || this.getSince() ? this.state.since.valueOf() : null
+
+      var shareUrl = window.location.href.split("#")[0]+"#/shared/"+this.props.sharingKey.get('key')
+      if(this.state.dateFilterAdded){
+        shareUrl += "?since="+this.state.since.valueOf()
       }
 
       return <Grid>
@@ -168,8 +216,10 @@ class TreePage extends React.Component {
                 {shareButton}
                 {createLinkButton}
                 {editHiddenButton}
+                {addDateFilterButton}
             </ButtonToolbar>
-            <TreeContainer editingHidden={this.state.editingHidden} />
+            {dateFilter}
+            <TreeContainer editingHidden={this.state.editingHidden} since={treeSince} />
         </div>
 
         <Modal className="static-modal" show={this.props.sharingKey.get('key') != null} >
@@ -177,7 +227,7 @@ class TreePage extends React.Component {
                     <Modal.Title>Copy and paste this link to share:</Modal.Title>
                 </Modal.Header>
 
-                <Modal.Body>{window.location.href.split("#")[0]}#/shared/{this.props.sharingKey.get('key')}</Modal.Body>
+                <Modal.Body>{shareUrl}</Modal.Body>
 
                 <Modal.Footer>
                     <Button bsStyle="primary" onClick={this.props.removeKeyFromState}>Done</Button>
@@ -212,7 +262,8 @@ const mapStateToProps = state => {
     sharingKey: state.get('sharingKey'),
     searchResults: state.get('searchResults'),
     newLink: state.get('newLink'),
-    annotationsList: state.get('getAnnotations')
+    annotationsList: state.get('getAnnotations'),
+    tree: state.getIn(['getTree', 'tree'])
   }
 }
 

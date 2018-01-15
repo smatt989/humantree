@@ -26,6 +26,11 @@ trait TreeRoutes extends SlickRoutes with AuthenticationSupport{
     val links = Await.result(IdentityLink.byUserId(userId), Duration.Inf)
 
     IntroductionTree.treeByRootAndContext(root, context, links)
+
+
+    //val tree = IntroductionTree.treeByRootAndContext(root, context, links)
+
+    //Seq(IntroductionTree.bloop(tree.head, DateTime.now().minusDays(14).getMillis))
   }
 
   post("/share") {

@@ -38,6 +38,37 @@ class Tree extends React.Component {
     return tree
   }
 
+
+  treeSince(tree, since, lineage = [], seen = []) {
+    function helper(tree){
+        if(seen.includes(tree.name)) {
+            const unseenChild = tree.children ? tree.children.find(function(a){return !(seen.includes(a.name))}) : null
+            if(unseenChild){
+                lineage.push(tree)
+                return helper(unseenChild)
+            } else {
+                const newChildren = tree.children.filter(a => a.children.length > 0 || a.dateMillis > since)
+                tree.children = newChildren
+
+                if(lineage.length > 0){
+                    const lastLineage = lineage.slice(-1)[0]
+                    const treeIndex = lastLineage.children.findIndex(function(a){return a.name == tree.name})
+                    lastLineage.children[treeIndex] = tree
+                    lineage.splice(-1,1)
+                    return helper(lastLineage)
+                } else {
+                    return tree
+                }
+            }
+        } else {
+            seen.push(tree.name)
+            return helper(tree)
+        }
+    }
+
+    return helper(tree)
+  }
+
   treeFromRoot(tree, root) {
 
     if(!root){
@@ -64,11 +95,19 @@ class Tree extends React.Component {
   }
 
   makeNodeUrl(root) {
+    var link;
     if(this.getKey()) {
-        return '/shared/'+this.getKey()+'/'+root
+        link = '/shared/'+this.getKey()+'/'+root
     } else {
-        return '/tree/'+root
+        link = '/tree/'+root
     }
+
+    if(this.props.since){
+        link += "?since="+this.props.since
+    }
+
+    return link
+
   }
 
   makeTree() {
@@ -99,6 +138,10 @@ class Tree extends React.Component {
       treeData = treeData.get(0)
       treeData = this.treeFromRoot(treeData, this.getRoot())
       treeData = treeData.toJS();
+
+      if(this.props.since){
+        treeData = this.treeSince(treeData, this.props.since)
+      }
 
       if(treeData.children.length > 100){
         treeData = this.pruneDeadEndFirstConnections(treeData);
