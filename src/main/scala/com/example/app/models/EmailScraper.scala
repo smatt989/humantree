@@ -239,7 +239,9 @@ object EmailScraper {
         val to = userHeaderValueByName(headers, "To")
         val cc = userHeaderValueByName(headers, "cc")
 
-        val newPersons = (from ++ to ++ cc).distinct diff knownEmails
+        val totalPeople = from ++ to ++ cc
+
+        val newPersons = totalPeople.distinct diff knownEmails
 
         val fromTry = try {
 
@@ -255,7 +257,7 @@ object EmailScraper {
         val dateString = headerValueByName(message.getPayload.getHeaders, "Date")
         val date = dateString.flatMap(d => DateParserUtil.dateParse(d, firstPass = true))
 
-        if(date.isDefined && fromTry.isDefined && newPersons.size <= 10) {
+        if(date.isDefined && fromTry.isDefined && totalPeople.size <= 10) {
           val from = fromTry.get
 
           print(newPersons.size + " new persons...")
