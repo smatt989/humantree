@@ -220,7 +220,8 @@ object EmailScraper {
 
     println(introductions.size + " introductions...")
 
-    var knownEmails = scala.collection.mutable.Buffer(introductions.map(_.introPersonEmail).toSeq:_*)
+    //var knownEmails = scala.collection.mutable.Buffer(introductions.map(_.introPersonEmail).toSeq:_*)
+    val emailByStartDate = scala.collection.mutable.Map[String, Long](introductions.map(a => a.introPersonEmail -> a.introTimeMillis).toSeq:_*)
 
     threads.drop(toDrop).zipWithIndex.map{case (t, i) =>
 
@@ -239,9 +240,9 @@ object EmailScraper {
         val to = userHeaderValueByName(headers, "To")
         val cc = userHeaderValueByName(headers, "cc")
 
-        val totalPeople = from ++ to ++ cc
+        val totalPeople = (from ++ to ++ cc).distinct
 
-        val newPersons = totalPeople.distinct diff knownEmails
+        //val newPersons = totalPeople.distinct diff knownEmails
 
         val fromTry = try {
 
@@ -260,16 +261,20 @@ object EmailScraper {
         if(date.isDefined && fromTry.isDefined && totalPeople.size <= 10) {
           val from = fromTry.get
 
-          print(newPersons.size + " new persons...")
-          val introsToMake = newPersons.flatMap(p => {
-            if (p != myEmail && countNumbersInString(p) <= 8) {
+          print(totalPeople.size + " people...")
+          val introsToMake = totalPeople.flatMap(p => {
+            val previousDate = emailByStartDate.get(p)
 
-              knownEmails +:= p
+            val thisDate = date.get.getMillis
+            if (p != myEmail && countNumbersInString(p) <= 8 && (previousDate.isEmpty || previousDate.get > thisDate)) {
+
+              //knownEmails +:= p
+              emailByStartDate ++= Map(p -> thisDate)
 
               if (p != from) {
-                Some(IntroductionsRow(null, from, myEmail, p, date.get.getMillis))
+                Some(IntroductionsRow(null, from, myEmail, p, thisDate))
               } else {
-                Some(IntroductionsRow(null, myEmail, myEmail, p, date.get.getMillis))
+                Some(IntroductionsRow(null, myEmail, myEmail, p, thisDate))
               }
             } else {
               None
@@ -282,7 +287,7 @@ object EmailScraper {
           println(message)
           println("DATE: "+date.isDefined)
           println("FROM: "+fromTry.isDefined)
-          println("SIZE: "+newPersons.size)
+          println("SIZE: "+totalPeople.size)
           Nil
         }
       })
