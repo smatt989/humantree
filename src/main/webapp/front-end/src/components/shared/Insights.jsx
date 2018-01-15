@@ -55,9 +55,11 @@ class Insights extends React.Component {
                    <DatePicker selected={this.state.since} onChange={this.handleChangeDate} />
                  </PageHeader>
                  <div className="col-md-6" >
+                    <h3>Introductions</h3>
                     <IntroductionsTableContainer since={this.state.since.valueOf()} />
                  </div>
                  <div className="col-md-6" >
+                    <h3>Top Connectors</h3>
                     <ConnectorsTableContainer since={this.state.since.valueOf()} />
                  </div>
                </div>
