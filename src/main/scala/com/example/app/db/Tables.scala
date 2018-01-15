@@ -14,7 +14,7 @@ trait Tables {
   import slick.jdbc.{GetResult => GR}
 
   /** DDL for all tables. Call .create to execute. */
-  lazy val schema: profile.SchemaDescription = Array(DeviceTokens.schema, GmailAccessTokens.schema, GmailScrapeProgresses.schema, IdentityLinks.schema, Introductions.schema, Migrations.schema, NodeAnnotations.schema, ShareableContexts.schema, UserAccounts.schema, UserConnections.schema, UserSessions.schema).reduceLeft(_ ++ _)
+  lazy val schema: profile.SchemaDescription = Array(DeviceTokens.schema, GmailAccessTokens.schema, GmailScrapeProgresses.schema, IdentityLinks.schema, Introductions.schema, Migrations.schema, NodeAnnotations.schema, ScraperActors.schema, ShareableContexts.schema, UserAccounts.schema, UserConnections.schema, UserSessions.schema).reduceLeft(_ ++ _)
   @deprecated("Use .schema instead of .ddl", "3.0")
   def ddl = schema
 
@@ -235,6 +235,47 @@ trait Tables {
   }
   /** Collection-like TableQuery object for table NodeAnnotations */
   lazy val NodeAnnotations = new TableQuery(tag => new NodeAnnotations(tag))
+
+  /** Entity class storing rows of table ScraperActors
+   *  @param scraperActorId Database column SCRAPER_ACTOR_ID SqlType(VARCHAR), PrimaryKey
+   *  @param userId Database column USER_ID SqlType(INTEGER)
+   *  @param email Database column EMAIL SqlType(VARCHAR)
+   *  @param startedMillis Database column STARTED_MILLIS SqlType(BIGINT)
+   *  @param finishedMillis Database column FINISHED_MILLIS SqlType(BIGINT), Default(None)
+   *  @param updatedMillis Database column UPDATED_MILLIS SqlType(BIGINT)
+   *  @param terminatedMillis Database column TERMINATED_MILLIS SqlType(BIGINT), Default(None) */
+  case class ScraperActorsRow(scraperActorId: String, userId: Int, email: String, startedMillis: Long, finishedMillis: Option[Long] = None, updatedMillis: Long, terminatedMillis: Option[Long] = None)
+  /** GetResult implicit for fetching ScraperActorsRow objects using plain SQL queries */
+  implicit def GetResultScraperActorsRow(implicit e0: GR[String], e1: GR[Int], e2: GR[Long], e3: GR[Option[Long]]): GR[ScraperActorsRow] = GR{
+    prs => import prs._
+    ScraperActorsRow.tupled((<<[String], <<[Int], <<[String], <<[Long], <<?[Long], <<[Long], <<?[Long]))
+  }
+  /** Table description of table SCRAPER_ACTORS. Objects of this class serve as prototypes for rows in queries. */
+  class ScraperActors(_tableTag: Tag) extends Table[ScraperActorsRow](_tableTag, Some("BEE"), "SCRAPER_ACTORS") {
+    def * = (scraperActorId, userId, email, startedMillis, finishedMillis, updatedMillis, terminatedMillis) <> (ScraperActorsRow.tupled, ScraperActorsRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = (Rep.Some(scraperActorId), Rep.Some(userId), Rep.Some(email), Rep.Some(startedMillis), finishedMillis, Rep.Some(updatedMillis), terminatedMillis).shaped.<>({r=>import r._; _1.map(_=> ScraperActorsRow.tupled((_1.get, _2.get, _3.get, _4.get, _5, _6.get, _7)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column SCRAPER_ACTOR_ID SqlType(VARCHAR), PrimaryKey */
+    val scraperActorId: Rep[String] = column[String]("SCRAPER_ACTOR_ID", O.PrimaryKey)
+    /** Database column USER_ID SqlType(INTEGER) */
+    val userId: Rep[Int] = column[Int]("USER_ID")
+    /** Database column EMAIL SqlType(VARCHAR) */
+    val email: Rep[String] = column[String]("EMAIL")
+    /** Database column STARTED_MILLIS SqlType(BIGINT) */
+    val startedMillis: Rep[Long] = column[Long]("STARTED_MILLIS")
+    /** Database column FINISHED_MILLIS SqlType(BIGINT), Default(None) */
+    val finishedMillis: Rep[Option[Long]] = column[Option[Long]]("FINISHED_MILLIS", O.Default(None))
+    /** Database column UPDATED_MILLIS SqlType(BIGINT) */
+    val updatedMillis: Rep[Long] = column[Long]("UPDATED_MILLIS")
+    /** Database column TERMINATED_MILLIS SqlType(BIGINT), Default(None) */
+    val terminatedMillis: Rep[Option[Long]] = column[Option[Long]]("TERMINATED_MILLIS", O.Default(None))
+
+    /** Foreign key referencing UserAccounts (database name SCRAPER_ACTOR_TO_USERS_FK) */
+    lazy val userAccountsFk = foreignKey("SCRAPER_ACTOR_TO_USERS_FK", userId, UserAccounts)(r => r.userAccountId, onUpdate=ForeignKeyAction.Restrict, onDelete=ForeignKeyAction.Restrict)
+  }
+  /** Collection-like TableQuery object for table ScraperActors */
+  lazy val ScraperActors = new TableQuery(tag => new ScraperActors(tag))
 
   /** Entity class storing rows of table ShareableContexts
    *  @param shareableContextId Database column SHAREABLE_CONTEXT_ID SqlType(VARCHAR), PrimaryKey

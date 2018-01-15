@@ -1,6 +1,7 @@
 package com.example.app
 
 import com.example.app.Routes._
+import com.example.app.models.EmailScraper
 import org.scalatra.{FutureSupport, ScalatraServlet}
 
 
@@ -18,5 +19,7 @@ class SlickApp() extends ScalatraServlet with FutureSupport
   lazy val realm = "rekki"
 
   protected implicit def executor = scala.concurrent.ExecutionContext.Implicits.global
+
+  EmailScraper.startupResponseRequestCreator()
 
 }

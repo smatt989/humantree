@@ -1,38 +1,153 @@
 package com.example.app.models
 
-import com.example.app.db.Tables.IntroductionsRow
-import com.google.api.services.gmail.{Gmail, GmailScopes}
-import com.google.api.services.gmail.model.{Message, MessagePartHeader, Thread => GThread}
+import java.util.concurrent.TimeUnit
+
+import com.example.app.db.Tables.{IntroductionsRow, ScraperActorsRow}
+import com.google.api.services.gmail.Gmail
+import com.google.api.services.gmail.model.{MessagePartHeader, Thread => GThread}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
-import akka.actor.{Actor, ActorSystem, Props}
+import akka.actor.{Actor, ActorSystem, PoisonPill, Props}
+import akka.util.Timeout
 import com.example.app.EmailScrapeRequestObject
 import org.json4s.ParserUtil.ParseException
 
 import collection.JavaConversions._
 import scala.concurrent.Await
-import scala.concurrent.duration.Duration
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class EmailActor extends Actor {
 
   def receive = {
     case a: EmailScrapeRequestObject =>
+      Await.result(ScraperActor.terminateUnfinishedForUserIdEmail(a.email, a.appUserId), Duration.Inf)
+      EmailScraper.declareActor(a.email, a.appUserId)
       println("scraping...")
 
       EmailScraper.basicProcess(a.email, a.appUserId, a.startAt)
+      EmailScraper.finishActor(a.email, a.appUserId)
       println("donezo")
-      context.stop(self)
+      killSelf()
+    case a: KillActorRequest =>
+      killSelf()
+  }
+
+  def killSelf() = {
+    println("killing actor...")
+    self ! PoisonPill
+    //context.stop(self)
+  }
+}
+
+class ActorJanitor extends Actor {
+
+  def receive = {
+    case "patrol" =>
+      EmailScraper.checkStopped()
+    case "update" =>
+      EmailScraper.checkDue()
+    case "new" =>
+      EmailScraper.checkNew()
   }
 }
 
 object EmailScraper {
+  implicit val timeout = Timeout(FiniteDuration(1, TimeUnit.SECONDS))
+
   val system = ActorSystem()
+
+  val guardian = system.actorOf(Props[ActorJanitor])
+
+  val updateEveryMillis = 24 * 60 * 60 * 1000
+  val stuckMillis = 5 * 60 * 1000
+
+  def startupResponseRequestCreator() = {
+    system.scheduler.schedule(0 milliseconds, 10 seconds, guardian, "new")
+    system.scheduler.schedule(0 milliseconds, 1 minute, guardian, "patrol")
+    system.scheduler.schedule(0 milliseconds, 1 hour, guardian, "update")
+  }
+
+  def checkNew() = {
+    val newAccounts = Await.result(ScraperActor.unscraped, Duration.Inf)
+
+    newAccounts.map(a => startAnActor(a.email, a.userId))
+  }
+
+  def checkStopped() = {
+    val stopped = Await.result(ScraperActor.unfinishedNotUpdatedInOver(stuckMillis), Duration.Inf)
+    stopped.groupBy(a => (a.email, a.userId)).foreach{case (pair, actors) =>
+      actors.foreach(a => {
+        killActor(a)
+      })
+      //TODO: EEEK SHOULD REALLY USE A WATCHER HERE
+      Thread.sleep(5000)
+      startAnActor(pair._1, pair._2)
+    }
+  }
+
+  def checkDue() = {
+    val dueMillis = updateEveryMillis
+    val due = Await.result(ScraperActor.finishedLongAgo(dueMillis), Duration.Inf).groupBy(a => (a.email, a.userId))
+        .mapValues(_.sortBy(_.finishedMillis).last).values.toSeq
+    due.foreach(s => {
+      startAnActor(s.email, s.userId)
+    })
+  }
+
+  def nameActor(a: ScraperActorsRow): String = {
+    nameActor(a.email, a.userId)
+  }
+
+  def nameActor(email: String, userId: Int): String = {
+    userId+"$"+email
+  }
+
+  def killActor(a: ScraperActorsRow) = {
+    val name = nameActor(a)
+    try {
+      Await.result(system.actorSelection("user/" + name).resolveOne(), Duration.Inf) ! KillActorRequest(a.email, a.userId)
+    } catch {
+      case _ => Unit
+    }
+  }
+
+  def declareActor(email: String, userId: Int) = {
+    val now = DateTime.now().getMillis
+    val newActor = ScraperActorsRow(null, userId, email, now, None, now)
+    Await.result(ScraperActor.create(newActor), Duration.Inf)
+  }
+
+  def finishActor(email: String, userId: Int) = {
+    val actor = Await.result(ScraperActor.byEmailAndUserId(email, userId), Duration.Inf)
+    actor.map(a => {
+      val now = DateTime.now().getMillis
+      val toUpdate = a.copy(finishedMillis = Some(now))
+      Await.result(ScraperActor.updateOne(toUpdate), Duration.Inf)
+    })
+  }
+
+  def updateActor(email: String, userId: Int) = {
+    val actor = Await.result(ScraperActor.byEmailAndUserId(email, userId), Duration.Inf)
+    actor.map(a => {
+      val now = DateTime.now().getMillis
+      val toUpdate = a.copy(updatedMillis = now)
+      Await.result(ScraperActor.updateOne(toUpdate), Duration.Inf)
+    })
+  }
 
   def startAnActor(email: String, appUserId: Int, startAt: Option[Int] = None) = {
     val request = EmailScrapeRequestObject(email, appUserId, startAt)
-    val myActor = system.actorOf(Props[EmailActor])
 
-    myActor ! request
+    try {
+      val myActor = system.actorOf(Props[EmailActor], EmailScraper.nameActor(email, appUserId))
+
+      myActor ! request
+    } catch {
+      case _ =>
+        println("did not create an actor -- already running")
+        Unit
+    }
   }
 
   def threadsByLabels(service: Gmail, userId: String, labels: Seq[String], pageToken: Option[String] = None): Seq[GThread] = {
@@ -107,11 +222,11 @@ object EmailScraper {
 
     var knownEmails = scala.collection.mutable.Buffer(introductions.map(_.introPersonEmail).toSeq:_*)
 
-    threads.drop(toDrop).zipWithIndex.map{case (t, i) => {
+    threads.drop(toDrop).zipWithIndex.map{case (t, i) =>
 
       val threadIndex = i+toDrop+1
 
-      println("thread "+(threadIndex) +" / "+threadSize)
+      println("thread "+threadIndex +" / "+threadSize)
       val thread = getOneThread(service, myEmail, t.getId)
 
       val messages = thread.getMessages.toList
@@ -124,7 +239,7 @@ object EmailScraper {
         val to = userHeaderValueByName(headers, "To")
         val cc = userHeaderValueByName(headers, "cc")
 
-        val newPersons = (from ++ to ++ cc).distinct diff knownEmails.toSeq
+        val newPersons = (from ++ to ++ cc).distinct diff knownEmails
 
         val fromTry = try {
 
@@ -132,14 +247,13 @@ object EmailScraper {
 
           Some(userHeaderValue.head)
         } catch {
-          case _ => {
+          case _ =>
             println("FROM ERROR")
             None
-          }
         }
 
-        val dateString = headerValueByName(message.getPayload().getHeaders(), "Date")
-        val date = dateString.flatMap(d => DateParserUtil.dateParse(d, true))
+        val dateString = headerValueByName(message.getPayload.getHeaders, "Date")
+        val date = dateString.flatMap(d => DateParserUtil.dateParse(d, firstPass = true))
 
         if(date.isDefined && fromTry.isDefined && newPersons.size <= 10) {
           val from = fromTry.get
@@ -177,11 +291,12 @@ object EmailScraper {
 
       if(threadIndex % 7 == 0 || threadIndex % 19 == 0) {
         Await.result(GmailScrapeProgress.updateThreadCount(progress.gmailScrapeProgressId, threadIndex), Duration.Inf)
+        updateActor(myEmail, appUserId)
       }
 
       //knownEmails ++= saved.map(_.introPersonEmail)
       saved
-    }}
+    }
 
     Await.result(GmailScrapeProgress.updateThreadCount(progress.gmailScrapeProgressId, threadSize), Duration.Inf)
     Await.result(GmailScrapeProgress.updateStatus(progress.gmailScrapeProgressId, GmailScrapeProgress.STATUS_STOPPED), Duration.Inf)
