@@ -351,7 +351,9 @@ object DateParserUtil {
                       val tryWithoutEnd = d.split(" \\(").head
                       dateParse(tryWithoutEnd, false)
                     } else {
-                      throw new ParseException("COULD NOT PARSE: "+d, new Exception())
+                      println("COULD NOT PARSE: "+d)
+                      None
+                      //throw new ParseException("COULD NOT PARSE: "+d, new Exception())
                     }
                   }
                 }
