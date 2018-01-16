@@ -60,11 +60,11 @@ object EmailScraper {
   val guardian = system.actorOf(Props[ActorJanitor])
 
   val updateEveryMillis = 24 * 60 * 60 * 1000
-  val stuckMillis = 5 * 60 * 1000
+  val stuckMillis = 1 * 60 * 1000
 
   def startupResponseRequestCreator() = {
     system.scheduler.schedule(0 milliseconds, 10 seconds, guardian, "new")
-    system.scheduler.schedule(0 milliseconds, 1 minute, guardian, "patrol")
+    system.scheduler.schedule(0 milliseconds, 10 seconds, guardian, "patrol")
     system.scheduler.schedule(0 milliseconds, 1 hour, guardian, "update")
   }
 
@@ -150,24 +150,45 @@ object EmailScraper {
     }
   }
 
-  def threadsByLabels(service: Gmail, userId: String, labels: Seq[String], pageToken: Option[String] = None): Seq[GThread] = {
-    val response = if(pageToken.isEmpty)
-                    service.users().threads().list(userId).setLabelIds(labels).execute()
-                  else
-                    service.users().threads().list(userId).setLabelIds(labels).setPageToken(pageToken.get).execute()
+  def threadsByLabels(email: String, appUserId: Int, service: Gmail, userId: String, labels: Seq[String], pageToken: Option[String] = None, attempt: Int = 0): Seq[GThread] = {
+    try {
+      updateActor(email, appUserId)
+      val response = if (pageToken.isEmpty)
+        service.users().threads().list(userId).setLabelIds(labels).execute()
+      else
+        service.users().threads().list(userId).setLabelIds(labels).setPageToken(pageToken.get).execute()
 
-    val nextThreads = if(response.getThreads != null && response.getNextPageToken != null)
-                        threadsByLabels(service, userId, labels, Some(response.getNextPageToken))
-                      else
-                        Nil
+      val nextThreads = if (response.getThreads != null && response.getNextPageToken != null)
+        threadsByLabels(email, appUserId, service, userId, labels, Some(response.getNextPageToken), 0)
+      else
+        Nil
 
-    val theseThreads: Seq[GThread] = response.getThreads.toList
-
-    theseThreads ++ nextThreads
+      val theseThreads: Seq[GThread] = response.getThreads.toList
+      theseThreads ++ nextThreads
+    } catch {
+      case _ =>
+        if (attempt < 3) {
+          Thread.sleep(5000)
+          threadsByLabels(email, appUserId, service, userId, labels, pageToken, attempt + 1)
+        } else {
+          throw new Exception("could not get threads")
+        }
+    }
   }
 
-  def getOneThread(service: Gmail, userId: String, threadId: String) =
-    service.users().threads().get(userId, threadId).execute()
+  def getOneThread(service: Gmail, userId: String, threadId: String, attempt: Int = 0): GThread = {
+    try {
+      service.users().threads().get(userId, threadId).execute()
+    } catch {
+      case _ =>
+        if (attempt < 3) {
+          Thread.sleep(5000)
+          getOneThread(service, userId, threadId, attempt + 1)
+        } else {
+          throw new Exception("failed to get thread")
+        }
+    }
+  }
 
   def headerValueByName(headers: Seq[MessagePartHeader], key: String) = {
     try {
@@ -209,7 +230,7 @@ object EmailScraper {
 
     val toDrop = math.max(forceStartAt.getOrElse(progress.threadsProcessed) - 20, 0)
 
-    val threads = threadsByLabels(service, myEmail, Seq("SENT")).reverse
+    val threads = threadsByLabels(myEmail, appUserId, service, myEmail, Seq("SENT")).reverse
     val threadSize = threads.size
 
     GmailScrapeProgress.updateTotalThreads(progress.gmailScrapeProgressId, Some(threadSize))
@@ -320,7 +341,8 @@ object DateParserUtil {
   val df5 = DateTimeFormat.forPattern("EEE d MMM yyyy HH:mm:ss Z ...")
   val df6 = DateTimeFormat.forPattern("EEE MMM dd yyyy HH:mm:ss Z")
 
-  "Thu Mar 16 2017 23:45:02 -0400"
+  //"Thu Mar 16 2017 23:45:02 -0400"
+  //"Tue 15 Nov 2005 20:44:36 +0000 GMT"
 
   def dateParse(da: String, firstPass: Boolean = true): Option[DateTime] = {
     val d = da.replaceAll(" +", " ").replaceAll(",", "")
