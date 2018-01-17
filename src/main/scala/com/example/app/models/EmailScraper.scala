@@ -88,8 +88,7 @@ object EmailScraper {
 
   def checkDue() = {
     val dueMillis = updateEveryMillis
-    val due = Await.result(ScraperActor.finishedLongAgo(dueMillis), Duration.Inf).groupBy(a => (a.email, a.userId))
-        .mapValues(_.sortBy(_.finishedMillis).last).values.toSeq
+    val due = ScraperActor.finishedLongAgo(dueMillis)
     due.foreach(s => {
       startAnActor(s.email, s.userId)
     })

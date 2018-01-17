@@ -4,7 +4,10 @@ import com.example.app.{AppGlobals, UpdatableUUIDObject}
 import com.example.app.db.Tables.{ScraperActors, _}
 import AppGlobals.dbConfig.driver.api._
 import org.joda.time.DateTime
+
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.Duration
 
 object ScraperActor extends UpdatableUUIDObject[ScraperActorsRow, ScraperActors]{
   def updateQuery(a: _root_.com.example.app.db.Tables.ScraperActorsRow) = table.filter(t => idColumnFromTable(t) === idFromRow(a))
@@ -47,7 +50,9 @@ object ScraperActor extends UpdatableUUIDObject[ScraperActorsRow, ScraperActors]
   def finishedLongAgo(millis: Long) = {
     val now = DateTime.now().getMillis
     val cutoff = now - millis
-    db.run(table.filter(a => a.finishedMillis.isDefined && a.finishedMillis < cutoff && a.terminatedMillis.isEmpty).result)
+    val finishedRuns = Await.result(db.run(table.filter(a => a.finishedMillis.isDefined && a.terminatedMillis.isEmpty).result), Duration.Inf)
+    val lastRuns = finishedRuns.filter(_.finishedMillis.isDefined).groupBy(a => (a.email, a.userId)).mapValues(_.sortBy(_.finishedMillis.get).last).values.toSeq
+    lastRuns.filter(_.finishedMillis.get < cutoff)
   }
 
   def terminateUnfinishedForUserIdEmail(email: String, userId: Int) = {
