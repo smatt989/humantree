@@ -11,7 +11,7 @@ const CoolingConnectionsTableEntry = ({ data }) => {
   return (
     <tr>
       <td><b>{data.email}</b></td>
-      <td>{new Date(data.lastInteractionMillis).toDateString()}</td>
+      <td className="tight-edge">{moment(data.lastInteractionMillis).format('D MMM YYYY')}</td>
     </tr>)
   ;
 };

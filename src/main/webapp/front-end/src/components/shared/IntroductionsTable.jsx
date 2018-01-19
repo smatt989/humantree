@@ -24,8 +24,8 @@ class IntroductionsTable extends React.Component {
 				<Table className="task-tbl"  bordered condensed>
 		      <thead>
 		        <tr>
-		          <th>Introduced to (by)</th>
-		          <th>Date</th>
+		          <th className="col-md-8">Introduced to (by)</th>
+		          <th className="col-md-4">Date</th>
 		        </tr>
 		      </thead>
 		      <tbody>

@@ -25,8 +25,8 @@ class CoolingConnectionsTable extends React.Component {
 				<Table className="task-tbl"  bordered condensed>
 		      <thead>
 		        <tr>
-		          <th>Connection</th>
-		          <th>Contacted</th>
+		          <th className="col-md-8">Connection</th>
+		          <th className="col-md-4">Contacted</th>
 		        </tr>
 		      </thead>
 		      <tbody>

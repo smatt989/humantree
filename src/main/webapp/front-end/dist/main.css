@@ -13723,6 +13723,10 @@ a.circle.active:hover {
 .container {
   padding: 0px !important;
 }
+.tight-edge {
+  padding-left: 0px !important;
+  padding-right: 0px !important;
+}
 .landing {
   background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.2)), url("https://assets.atlasobscura.com/media/W1siZiIsInVwbG9hZHMvcGxhY2VfaW1hZ2VzL2U2ZTI3NTAzOTM3ODU1OTAwYl80MDcwNTgxNzA5XzEyMDRmMjVlM2JfYi5qcGciXSxbInAiLCJ0aHVtYiIsIngzOTA-Il0sWyJwIiwiY29udmVydCIsIi1xdWFsaXR5IDgxIC1hdXRvLW9yaWVudCJdXQ/e6e27503937855900b_4070581709_1204f25e3b_b.jpg");
   background-size: cover;

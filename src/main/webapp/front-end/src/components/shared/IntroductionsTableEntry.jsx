@@ -13,7 +13,7 @@ const IntroductionsTableEntry = ({ data }) => {
   return (
     <tr>
       <td><b>{data.intro}</b>{sender}</td>
-      <td>{new Date(data.dateMillis).toDateString()}</td>
+      <td>{moment(data.dateMillis).format('D MMM YYYY')}</td>
     </tr>)
   ;
 };

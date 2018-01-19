@@ -24,8 +24,8 @@ class ConnectorsTable extends React.Component {
 				<Table className="task-tbl"  bordered condensed>
 		      <thead>
 		        <tr>
-		          <th>Connector</th>
-		          <th>Introductions</th>
+		          <th className="col-md-8">Connector</th>
+		          <th className="col-md-4">Introductions</th>
 		        </tr>
 		      </thead>
 		      <tbody>
