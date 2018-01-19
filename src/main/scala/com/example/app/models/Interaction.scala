@@ -35,7 +35,8 @@ object Interaction extends SlickUUIDObject[InteractionsRow, Interactions]{
     val renamedInteractions = interactions.map(i => i.copy(interactedWithEmail = nameMap.get(i.interactedWithEmail).getOrElse(i.interactedWithEmail)))
 
     //TODO: HOLY FUCK NEED BETTER USER IDENTITY ACROSS THE BOARD...
-    val frequentInteractionsWithoutEmailsInTwoMonths = renamedInteractions.groupBy(_.interactedWithEmail)
+    val frequentInteractionsWithoutEmailsInTwoMonths = renamedInteractions.groupBy(a => (a.interactedWithEmail, a.interactionDate)).values.toSeq.map(_.head)
+      .groupBy(_.interactedWithEmail)
       .filterNot(_._2.exists(_.interactionDate > twoMonthsAgo)) //no contact in the last 2 months
       .filter(_._2.size > 10) //at least 10 interactions
       .filter(a => a._2.map(_.interactionDate).max - a._2.map(_.interactionDate).min > (monthMillis * 2)) //interactions span at least 2 months
