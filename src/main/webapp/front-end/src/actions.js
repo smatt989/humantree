@@ -623,3 +623,31 @@ export function getConnectorsError(error) {
     error: error
   };
 }
+
+export function getCoolingConnections() {
+
+  const request = axios({
+    method: 'get',
+    url: `${domain}/coolingoff`,
+    headers: authenticate()
+  });
+
+  return {
+    type: 'GET_COOLING_CONNECTIONS',
+    payload: request
+  };
+}
+
+export function getCoolingConnectionsSuccess(loaded) {
+  return {
+    type: 'GET_COOLING_CONNECTIONS_SUCCESS',
+    payload: loaded
+  };
+}
+
+export function getCoolingConnectionsError(error) {
+  return {
+    type: 'GET_COOLING_CONNECTIONS_ERROR',
+    error: error
+  };
+}

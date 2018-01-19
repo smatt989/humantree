@@ -33,7 +33,8 @@ function cleanState() {
     getAnnotationsMap: Map({annotations: Map({}), loading: false, error: null}),
     deleteAnnotation: Map({loading: false, error: null}),
     getIntroductions: Map({introductions: List.of(), loading: false, error: null}),
-    getConnectors: Map({connectors: List.of(), loading: false, error: null})
+    getConnectors: Map({connectors: List.of(), loading: false, error: null}),
+    getCoolingConnections: Map({connections: List.of(), loading: false, error: null})
   });
 
   return cleanState;
@@ -332,6 +333,18 @@ function getConnectorsError(state, error) {
   return state.set('getConnectors', Map({connectors: List.of(), loading: false, error: Immutable.fromJS(error)}));
 }
 
+function getCoolingConnections(state) {
+  return state.set('getCoolingConnections', Map({connections: List.of(), loading: true, error: null}));
+}
+
+function getCoolingConnectionsSuccess(state, connections){
+  return state.set('getCoolingConnections', Map({connections: Immutable.fromJS(connections), loading: false, error: null}));
+}
+
+function getCoolingConnectionsError(state, error) {
+  return state.set('getCoolingConnections', Map({connections: List.of(), loading: false, error: Immutable.fromJS(error)}));
+}
+
 export default function reducer(state = Map(), action) {
   switch (action.type) {
     case 'CLEAN_STATE':
@@ -468,6 +481,12 @@ export default function reducer(state = Map(), action) {
       return getConnectorsSuccess(state, action.payload);
     case 'GET_CONNECTORS_ERROR':
       return getConnectorsError(state, action.error);
+    case 'GET_COOLING_CONNECTIONS':
+      return getCoolingConnections(state);
+    case 'GET_COOLING_CONNECTIONS_SUCCESS':
+      return getCoolingConnectionsSuccess(state, action.payload);
+    case 'GET_COOLING_CONNECTIONS_ERROR':
+      return getCoolingConnectionsError(state, action.error);
     default:
       return state;
   }

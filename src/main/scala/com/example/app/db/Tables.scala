@@ -14,7 +14,7 @@ trait Tables {
   import slick.jdbc.{GetResult => GR}
 
   /** DDL for all tables. Call .create to execute. */
-  lazy val schema: profile.SchemaDescription = Array(DeviceTokens.schema, GmailAccessTokens.schema, GmailScrapeProgresses.schema, IdentityLinks.schema, Introductions.schema, Migrations.schema, NodeAnnotations.schema, ScraperActors.schema, ShareableContexts.schema, UserAccounts.schema, UserConnections.schema, UserSessions.schema).reduceLeft(_ ++ _)
+  lazy val schema: profile.SchemaDescription = Array(DeviceTokens.schema, GmailAccessTokens.schema, GmailScrapeProgresses.schema, IdentityLinks.schema, Interactions.schema, Introductions.schema, Migrations.schema, NodeAnnotations.schema, ScraperActors.schema, ShareableContexts.schema, UserAccounts.schema, UserConnections.schema, UserSessions.schema).reduceLeft(_ ++ _)
   @deprecated("Use .schema instead of .ddl", "3.0")
   def ddl = schema
 
@@ -151,6 +151,35 @@ trait Tables {
   }
   /** Collection-like TableQuery object for table IdentityLinks */
   lazy val IdentityLinks = new TableQuery(tag => new IdentityLinks(tag))
+
+  /** Entity class storing rows of table Interactions
+   *  @param interactionId Database column INTERACTION_ID SqlType(VARCHAR), PrimaryKey
+   *  @param userEmail Database column USER_EMAIL SqlType(VARCHAR)
+   *  @param interactedWithEmail Database column INTERACTED_WITH_EMAIL SqlType(VARCHAR)
+   *  @param interactionDate Database column INTERACTION_DATE SqlType(BIGINT) */
+  case class InteractionsRow(interactionId: String, userEmail: String, interactedWithEmail: String, interactionDate: Long)
+  /** GetResult implicit for fetching InteractionsRow objects using plain SQL queries */
+  implicit def GetResultInteractionsRow(implicit e0: GR[String], e1: GR[Long]): GR[InteractionsRow] = GR{
+    prs => import prs._
+    InteractionsRow.tupled((<<[String], <<[String], <<[String], <<[Long]))
+  }
+  /** Table description of table INTERACTIONS. Objects of this class serve as prototypes for rows in queries. */
+  class Interactions(_tableTag: Tag) extends Table[InteractionsRow](_tableTag, Some("BEE"), "INTERACTIONS") {
+    def * = (interactionId, userEmail, interactedWithEmail, interactionDate) <> (InteractionsRow.tupled, InteractionsRow.unapply)
+    /** Maps whole row to an option. Useful for outer joins. */
+    def ? = (Rep.Some(interactionId), Rep.Some(userEmail), Rep.Some(interactedWithEmail), Rep.Some(interactionDate)).shaped.<>({r=>import r._; _1.map(_=> InteractionsRow.tupled((_1.get, _2.get, _3.get, _4.get)))}, (_:Any) =>  throw new Exception("Inserting into ? projection not supported."))
+
+    /** Database column INTERACTION_ID SqlType(VARCHAR), PrimaryKey */
+    val interactionId: Rep[String] = column[String]("INTERACTION_ID", O.PrimaryKey)
+    /** Database column USER_EMAIL SqlType(VARCHAR) */
+    val userEmail: Rep[String] = column[String]("USER_EMAIL")
+    /** Database column INTERACTED_WITH_EMAIL SqlType(VARCHAR) */
+    val interactedWithEmail: Rep[String] = column[String]("INTERACTED_WITH_EMAIL")
+    /** Database column INTERACTION_DATE SqlType(BIGINT) */
+    val interactionDate: Rep[Long] = column[Long]("INTERACTION_DATE")
+  }
+  /** Collection-like TableQuery object for table Interactions */
+  lazy val Interactions = new TableQuery(tag => new Interactions(tag))
 
   /** Entity class storing rows of table Introductions
    *  @param introductionId Database column INTRODUCTION_ID SqlType(VARCHAR), PrimaryKey

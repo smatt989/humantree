@@ -8,9 +8,10 @@ import {
 import { LinkContainer } from 'react-router-bootstrap';
 import {IntroductionsTableContainer} from './IntroductionsTable.jsx';
 import {ConnectorsTableContainer} from './ConnectorsTable.jsx';
+import {CoolingConnectionsTableContainer} from './CoolingConnectionsTable.jsx';
 import DatePicker from 'react-datepicker';
 import NavBar from '../NavBar.jsx';
-import { getIntroductions, getIntroductionsSuccess, getIntroductionsError, getConnectors, getConnectorsSuccess, getConnectorsError } from '../../actions.js';
+import { getIntroductions, getIntroductionsSuccess, getIntroductionsError, getConnectors, getConnectorsSuccess, getConnectorsError, getCoolingConnections, getCoolingConnectionsSuccess, getCoolingConnectionsError } from '../../actions.js';
 import {dispatchPattern} from '../../utilities.js';
 
 class Insights extends React.Component {
@@ -39,6 +40,7 @@ class Insights extends React.Component {
 
      this.props.fetchIntroductions(since);
      this.props.fetchConnectors(since);
+     this.props.fetchCoolingConnections();
   }
 
   handleChangeDate(a){
@@ -54,13 +56,17 @@ class Insights extends React.Component {
                    Insights since
                    <DatePicker selected={this.state.since} onChange={this.handleChangeDate} />
                  </PageHeader>
-                 <div className="col-md-6" >
+                 <div className="col-md-4" >
                     <h3>Introductions</h3>
                     <IntroductionsTableContainer since={this.state.since.valueOf()} />
                  </div>
-                 <div className="col-md-6" >
+                 <div className="col-md-4" >
                     <h3>Top Connectors</h3>
                     <ConnectorsTableContainer since={this.state.since.valueOf()} />
+                 </div>
+                 <div className="col-md-4" >
+                    <h3>Cooling Off</h3>
+                    <CoolingConnectionsTableContainer />
                  </div>
                </div>
              </Grid>;
@@ -80,7 +86,8 @@ const mapStateToProps = state => {
 const mapDispatchToProps = (dispatch, ownProps) => {
   return {
     fetchIntroductions: dispatchPattern(getIntroductions, getIntroductionsSuccess, getIntroductionsError),
-    fetchConnectors: dispatchPattern(getConnectors, getConnectorsSuccess, getConnectorsError)
+    fetchConnectors: dispatchPattern(getConnectors, getConnectorsSuccess, getConnectorsError),
+    fetchCoolingConnections: dispatchPattern(getCoolingConnections, getCoolingConnectionsSuccess, getCoolingConnectionsError)
   }
 }
 

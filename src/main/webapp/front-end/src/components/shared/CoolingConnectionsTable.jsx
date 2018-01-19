@@ -5,17 +5,18 @@ import {
   Button,
   ButtonGroup
 } from 'react-bootstrap';
-import ConnectorsTableEntry from './ConnectorsTableEntry.jsx';
+import CoolingConnectionsTableEntry from './CoolingConnectionsTableEntry.jsx';
 import {dispatchPattern} from '../../utilities.js';
 
-class ConnectorsTable extends React.Component {
+class CoolingConnectionsTable extends React.Component {
+
   buildContent() {
-    const { connectors, loading, error } = this.props;
+    const { connections, loading, error } = this.props;
     if (error) {
       return <div>Error</div>;
     } else if (loading) {
       return <div>Loading</div>;
-    } else if (!connectors) {
+    } else if (!connections) {
       return null;
     };
 
@@ -24,19 +25,19 @@ class ConnectorsTable extends React.Component {
 				<Table className="task-tbl"  bordered condensed>
 		      <thead>
 		        <tr>
-		          <th>Connector</th>
-		          <th>Introductions</th>
+		          <th>Connection</th>
+		          <th>Contacted</th>
 		        </tr>
 		      </thead>
 		      <tbody>
-		        { connectors
-              ? connectors.map(o =>
-		            <ConnectorsTableEntry key={o.name} data={o} since={this.props.since} {...this.props} />)
+		        { connections
+              ? connections.map(o =>
+		            <CoolingConnectionsTableEntry key={o.email} data={o} {...this.props} />)
 		          : null
 		        }
 	      </tbody>
 	    </Table>
-      { connectors.length > 0 ? null : <div /> }
+      { connections.length > 0 ? null : <div /> }
 		</div>;
   }
 
@@ -47,9 +48,9 @@ class ConnectorsTable extends React.Component {
 
 const mapStateToProps = state => {
   return {
-    connectors: state.getIn(['getConnectors', 'connectors']).sortBy(a => a.get('introductions')).reverse().toJS(),
-    loading: state.getIn(['getConnectors', 'loading']),
-    error: state.getIn(['getConnectors', 'error'])
+    connections: state.getIn(['getCoolingConnections', 'connections']).toJS(),
+    loading: state.getIn(['getCoolingConnections', 'loading']),
+    error: state.getIn(['getCoolingConnections', 'error'])
   }
 }
 
@@ -59,7 +60,7 @@ const mapDispatchToProps = (dispatch, ownProps) => {
   }
 }
 
-export const ConnectorsTableContainer = connect(
+export const CoolingConnectionsTableContainer = connect(
   mapStateToProps,
   mapDispatchToProps
-)(ConnectorsTable)
+)(CoolingConnectionsTable)

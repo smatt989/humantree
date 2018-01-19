@@ -2,7 +2,7 @@ package com.example.app.models
 
 import java.util.concurrent.TimeUnit
 
-import com.example.app.db.Tables.{IntroductionsRow, ScraperActorsRow}
+import com.example.app.db.Tables.{InteractionsRow, IntroductionsRow, ScraperActorsRow}
 import com.google.api.services.gmail.Gmail
 import com.google.api.services.gmail.model.{MessagePartHeader, Thread => GThread}
 import org.joda.time.DateTime
@@ -252,7 +252,7 @@ object EmailScraper {
 
       val messages = thread.getMessages.toList
 
-      val intros = messages.flatMap(message => {
+      val yikes = messages.map(message => {
 
         val headers = message.getPayload.getHeaders
 
@@ -301,20 +301,29 @@ object EmailScraper {
             }
           })
 
-          introsToMake
+          val interactions = totalPeople.filter(_ != myEmail).map(p => {
+            InteractionsRow(null, myEmail, p, date.get.getMillis)
+          })
+
+          (introsToMake, interactions)
         } else {
 
           println(message)
           println("DATE: "+date.isDefined)
           println("FROM: "+fromTry.isDefined)
           println("SIZE: "+totalPeople.size)
-          Nil
+          (Nil, Nil)
         }
       })
 
+      val intros = yikes.flatMap(_._1)
+      val interactions = yikes.flatMap(_._2)
+
       val saved = Await.result(Introduction.createMany(intros), Duration.Inf)
+      val savedInteractions = Await.result(Interaction.createMany(interactions), Duration.Inf)
 
       println("saved "+saved.size+" intros...")
+      println("saved "+ savedInteractions.size+" interactions...")
 
       if(threadIndex % 7 == 0 || threadIndex % 19 == 0) {
         Await.result(GmailScrapeProgress.updateThreadCount(progress.gmailScrapeProgressId, threadIndex), Duration.Inf)

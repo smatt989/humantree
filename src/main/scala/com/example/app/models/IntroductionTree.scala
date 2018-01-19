@@ -31,9 +31,9 @@ object IntroductionTree {
 
     val renamedIntros = renameIntros(intros, emailContexts, links)
 
-    val distinctIntros = renamedIntros.groupBy(_.introPersonEmail).mapValues(_.sortBy(_.introTimeMillis)).values.toSeq.map(_.head)
+    val uniqueIntros = distinctIntros(renamedIntros)
 
-    val senderToIntros = distinctIntros.groupBy(_.senderPersonEmail)
+    val senderToIntros = uniqueIntros.groupBy(_.senderPersonEmail)
 
     Seq(tryingThisWay(senderToIntros, IntroductionTree(root, DateTime.now().getMillis)))
   }
@@ -52,6 +52,10 @@ object IntroductionTree {
 
     intros.map(intro => intro.copy(senderPersonEmail = renameMap.getOrElse(intro.senderPersonEmail, intro.senderPersonEmail), introPersonEmail = renameMap.getOrElse(intro.introPersonEmail, intro.introPersonEmail)))
       .filter(a => a.introPersonEmail != a.senderPersonEmail && !emails.contains(a.introPersonEmail))
+  }
+
+  def distinctIntros(intros: Seq[IntroductionsRow]) = {
+    intros.groupBy(_.introPersonEmail).mapValues(_.sortBy(_.introTimeMillis)).values.toSeq.map(_.head)
   }
 
   //REPLACE AN ELEMENT AT AN INDEX IN A LIST

@@ -11,6 +11,7 @@ object Migrations {
     Migration4,
     Migration5,
     Migration6,
-    Migration7
+    Migration7,
+    Migration8
   )
 }
