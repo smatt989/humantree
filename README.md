@@ -37,7 +37,7 @@ LOCAL_DOMAIN
 ```
 
 You can set LOCAL_DOMAIN to be 'http://localhost:8080'
-For the other environment variables you can either get your own [https://console.developers.google.com/apis/credentials](gmail api credentials), or contact me for my development credentials.
+For the other environment variables you can either get your own gmail api credentials here https://console.developers.google.com/apis/credentials, or contact me for my development credentials.
 
 ## Development ##
 
