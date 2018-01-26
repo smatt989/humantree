@@ -1,6 +1,6 @@
-# Bee Label Maker #
+# Human Tree #
 
-This is image annotation software built using scalatra with a connection to Postgres/H2 db with Slick and serving up a react/redux web front end.
+This is a simple network visualization app built using scalatra with a connection to Postgres/H2 db with Slick and serving up a react/redux web front end.
 
 ## Initial Setup
 
@@ -9,8 +9,8 @@ https://github.com/smatt989/bee/wiki/Initial-Setup
 ## Build & Run ##
 
 ```sh
-$ cd bee
-$ ./sbt
+$ cd HumanTree
+$ sbt
 > jetty:start
 > browse
 ```
@@ -26,20 +26,33 @@ This command will:
 3. Check which migration scripts have already been applied
 4. Apply any unapplied migration scripts
 
+## Environment Variables ##
+
+To enable connecting to gmail api locally, you will need to update the following environment variables in your development environment:
+```
+HUMAN_TREE_APPLICATION_NAME
+HUMAN_TREE_CLIENT_ID
+HUMAN_TREE_CLIENT_SECRET
+LOCAL_DOMAIN
+```
+
+You can set LOCAL_DOMAIN to be 'http://localhost:8080'
+For the other environment variables you can either get your own [https://console.developers.google.com/apis/credentials](gmail api credentials), or contact me for my development credentials.
+
 ## Development ##
 
 For development you can have the web server recompile and restart after every code change by using the following code snippit:
 
 ```sh
-$ cd bee
-$ ./sbt
+$ cd HumanTree
+$ sbt
 > ~;jetty:stop;jetty:start
 ```
 
 To develop the front end separately from the backend, start the server the normal way, and separately run the front end on a different port:
 
 ```sh
-$ cd bee/src/main/webapp/front-end
+$ cd HumanTree/src/main/webapp/front-end
 $ webpack-dev-server --host 0.0.0.0 --port 9000
 ```
 
