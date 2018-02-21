@@ -5,11 +5,11 @@ import java.util.concurrent.TimeUnit
 import com.example.app.db.Tables.{InteractionsRow, IntroductionsRow, ScraperActorsRow}
 import com.google.api.services.gmail.Gmail
 import com.google.api.services.gmail.model.{MessagePartHeader, Thread => GThread}
-import org.joda.time.DateTime
+import org.joda.time.{DateTime, DateTimeConstants}
 import org.joda.time.format.DateTimeFormat
 import akka.actor.{Actor, ActorSystem, PoisonPill, Props}
 import akka.util.Timeout
-import com.example.app.EmailScrapeRequestObject
+import com.example.app.{EmailScrapeRequestObject, MailJetSender}
 import org.json4s.ParserUtil.ParseException
 
 import collection.JavaConversions._
@@ -40,6 +40,14 @@ class EmailActor extends Actor {
   }
 }
 
+class NotificationActor extends Actor {
+
+  def receive = {
+    case "go" =>
+      EmailScraper.weeklyNotification
+  }
+}
+
 class ActorJanitor extends Actor {
 
   def receive = {
@@ -59,6 +67,8 @@ object EmailScraper {
 
   val guardian = system.actorOf(Props[ActorJanitor])
 
+  val weeklyNotifier = system.actorOf(Props[NotificationActor])
+
   val updateEveryMillis = 24 * 60 * 60 * 1000
   val stuckMillis = 1 * 60 * 1000
 
@@ -66,6 +76,8 @@ object EmailScraper {
     system.scheduler.schedule(0 milliseconds, 10 seconds, guardian, "new")
     system.scheduler.schedule(0 milliseconds, 10 seconds, guardian, "patrol")
     system.scheduler.schedule(0 milliseconds, 1 hour, guardian, "update")
+
+    system.scheduler.schedule(0 milliseconds, 1 hour, weeklyNotifier, "go")
   }
 
   def checkNew() = {
@@ -92,6 +104,59 @@ object EmailScraper {
     due.foreach(s => {
       startAnActor(s.email, s.userId)
     })
+  }
+
+  def weeklyNotification = {
+    val now = DateTime.now()
+
+    val lastWeek = now.minusDays(7).getMillis
+
+    if(now.dayOfWeek() == DateTimeConstants.MONDAY && now.hourOfDay() == 17) {
+      val users = Await.result(User.getAll, Duration.Inf)
+
+
+      users.foreach(user => {
+        val introductions = Insights.introductions(lastWeek, user.userAccountId).sortBy(_.dateMillis)
+        val connectors = Insights.connectors(lastWeek, user.userAccountId).sortBy(_.introductions).reverse.take(3)
+        val coolingOff = scala.util.Random.shuffle(Insights.coolingOff(user.userAccountId)).take(3)
+
+        val body = weeklyNotificationEmailBody(introductions, connectors, coolingOff)
+
+        MailJetSender.sendEmail("Treople Weekly Update", body, user.email)
+      })
+    }
+  }
+
+  def weeklyNotificationEmailBody(introductions: Seq[IntroductionJson], connectors: Seq[ConnectorSummary], coolingOff: Seq[CoolingInteraction]) = {
+
+    val line1 = Some("<h2>Here's some information about what's been going on in your inbox this past week.</h2>")
+
+    val line2 = if(introductions.size > 0){
+      Some(
+        "<h3>You made some new connections:</h3>" + introductions.map(s => "<p>"+s.intro+s.sender.map(s => " (via "+s+")").getOrElse("")+"</p>").mkString(" ")
+      )
+    } else
+      None
+
+    val line3 = if(connectors.size > 0) {
+      Some(
+        "<h3>Your biggest connectors this week:</h3>" + connectors.map(s => "<p>"+s.name+"("+s.introductions+")"+"</p>").mkString(" ")
+      )
+    } else
+      None
+
+    val line4 = if(coolingOff.size > 0) {
+      Some(
+        "<h3>Some contacts you haven't emailed in a while:</h3>"+coolingOff.map(s => "<p>"+s.email+"</p>").mkString(" ")
+      )
+    } else
+      None
+
+    val line5 = Some("<a href="+MailJetSender.DOMAIN+"#/tree"+">View Treople now</a>")
+
+    val body = Seq(line1, line2, line3, line4, line5).flatten.mkString("<br />")
+
+    body
   }
 
   def nameActor(a: ScraperActorsRow): String = {

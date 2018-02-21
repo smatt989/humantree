@@ -52,7 +52,8 @@ lazy val project = Project (
       "com.typesafe.slick" %% "slick-codegen" % SlickVersion,
       "com.google.apis" % "google-api-services-gmail" % "v1-rev76-1.23.0",
       "com.google.oauth-client" % "google-oauth-client-java6" % "1.11.0-beta",
-      "com.google.oauth-client" % "google-oauth-client-jetty" % "1.23.0"
+      "com.google.oauth-client" % "google-oauth-client-jetty" % "1.23.0",
+      "com.mailjet" % "mailjet-client" % "4.0.5"
     ),
     scalacOptions := Seq("-feature"),
     mainClass in Compile := Some("JettyLauncher"),
