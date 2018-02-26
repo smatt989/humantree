@@ -111,7 +111,8 @@ object EmailScraper {
 
     val lastWeek = now.minusDays(7).getMillis
 
-    if(now.dayOfWeek() == DateTimeConstants.MONDAY && now.hourOfDay() == 17) {
+    if(now.dayOfWeek().get() == DateTimeConstants.MONDAY && now.hourOfDay().get() == 17) {
+      println("sending weekly emails...")
       val users = Await.result(User.getAll, Duration.Inf)
 
 
