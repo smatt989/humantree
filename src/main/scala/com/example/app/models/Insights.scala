@@ -39,7 +39,7 @@ object Insights {
 
     val renamedIntros = IntroductionTree.renameIntros(introductions, emails, links).filterNot(a => emails.contains(a.senderPersonEmail))
 
-    val introducers = renamedIntros.map(_.senderPersonEmail)
+    val introducers = renamedIntros.map(_.senderPersonEmail).distinct
 
     val introductionTrees = introducers.flatMap(i => IntroductionTree.treeFromIntroductions(i, emails, renamedIntros, links))
 
