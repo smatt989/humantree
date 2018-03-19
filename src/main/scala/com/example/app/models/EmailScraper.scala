@@ -109,10 +109,11 @@ object EmailScraper {
   def weeklyNotification = {
     val now = DateTime.now()
 
-    val lastWeek = now.minusDays(7).getMillis
-
     if(now.dayOfWeek().get() == DateTimeConstants.MONDAY && now.hourOfDay().get() == 17) {
       println("sending weekly emails...")
+
+      val lastWeek = now.minusDays(7).getMillis
+
       val users = Await.result(User.getAll, Duration.Inf)
 
 
@@ -121,9 +122,11 @@ object EmailScraper {
         val connectors = Insights.connectors(lastWeek, user.userAccountId).sortBy(_.introductions).reverse.take(3)
         val coolingOff = scala.util.Random.shuffle(Insights.coolingOff(user.userAccountId)).take(3)
 
-        val body = weeklyNotificationEmailBody(introductions, connectors, coolingOff)
+        if(introductions.size > 0 || connectors.size > 0 || coolingOff.size > 0) {
+          val body = weeklyNotificationEmailBody(introductions, connectors, coolingOff)
 
-        MailJetSender.sendEmail("Treople Weekly Update", body, user.email)
+          MailJetSender.sendEmail("Treople Weekly Update", body, user.email)
+        }
       })
     }
   }
