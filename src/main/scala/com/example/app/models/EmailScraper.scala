@@ -218,26 +218,44 @@ object EmailScraper {
     }
   }
 
-  def threadsByLabels(email: String, appUserId: Int, service: Gmail, userId: String, labels: Seq[String], pageToken: Option[String] = None, attempt: Int = 0): Seq[GThread] = {
+  def threadsByLabels(email: String, appUserId: Int, service: Gmail, userId: String, labels: Seq[String], amountToFetch: Int, threads: Seq[GThread] = Nil, pageToken: Option[String] = None, attempt: Int = 0, p: Int = 0): Seq[GThread] = {
     try {
       updateActor(email, appUserId)
       val response = if (pageToken.isEmpty)
-        service.users().threads().list(userId).setLabelIds(labels).execute()
+        service.users().threads().list(userId).setLabelIds(labels).setMaxResults(100L).execute()
       else
-        service.users().threads().list(userId).setLabelIds(labels).setPageToken(pageToken.get).execute()
-
-      val nextThreads = if (response.getThreads != null && response.getNextPageToken != null)
-        threadsByLabels(email, appUserId, service, userId, labels, Some(response.getNextPageToken), 0)
-      else
-        Nil
+        service.users().threads().list(userId).setLabelIds(labels).setPageToken(pageToken.get).setMaxResults(100L).execute()
 
       val theseThreads: Seq[GThread] = response.getThreads.toList
-      theseThreads ++ nextThreads
+
+/*      val sampleThread = theseThreads.head
+
+      val lastThread = theseThreads.last
+
+      val thread = getOneThread(service, email, sampleThread.getId)
+      val lThread = getOneThread(service, email, lastThread.getId)
+
+      val message = thread.getMessages.toList.head
+      val lastMessage = lThread.getMessages.toList.head
+
+      val dateString = headerValueByName(message.getPayload.getHeaders, "Date")
+      val lastDate = headerValueByName(lastMessage.getPayload.getHeaders, "Date")
+
+
+      println("threads: "+theseThreads.size+" page: "+p+" date: "+dateString+" to: "+lastDate)*/
+
+      val totalThreads = threads ++ theseThreads
+
+      if (response.getThreads != null && response.getNextPageToken != null && totalThreads.size < amountToFetch)
+        threadsByLabels(email, appUserId, service, userId, labels, amountToFetch, totalThreads, Some(response.getNextPageToken), 0, p + 1)
+      else
+        totalThreads
+
     } catch {
       case _ =>
         if (attempt < 3) {
           Thread.sleep(5000)
-          threadsByLabels(email, appUserId, service, userId, labels, pageToken, attempt + 1)
+          threadsByLabels(email, appUserId, service, userId, labels, amountToFetch, threads, pageToken, attempt + 1, p)
         } else {
           throw new Exception("could not get threads")
         }
@@ -298,25 +316,37 @@ object EmailScraper {
 
     val toDrop = math.max(forceStartAt.getOrElse(progress.threadsProcessed) - 20, 0)
 
-    val threads = threadsByLabels(myEmail, appUserId, service, myEmail, Seq("SENT")).reverse
-    val threadSize = threads.size
-
-    GmailScrapeProgress.updateTotalThreads(progress.gmailScrapeProgressId, Some(threadSize))
-
-    println(threadSize + " threads...")
-
     val introductions: Set[IntroductionsRow] = Await.result(Introduction.introductionsByReceiver(myEmail), Duration.Inf).toSet
+
+    val lastIntroduction = if(introductions.size > 0)
+      Some(introductions.map(_.introTimeMillis).max)
+    else
+      None
+
+    println("label query")
+
+    val labelInfo = service.users().labels().get(myEmail, "SENT").execute()
+    val totalThreads = labelInfo.getThreadsTotal.toInt
+
+    println("total threads: "+totalThreads)
+
+    val toFindThreads = totalThreads - toDrop
+
+    val threads = threadsByLabels(myEmail, appUserId, service, myEmail, Seq("SENT"), toFindThreads).reverse
+    val threadsFetched = threads.size
+
+    GmailScrapeProgress.updateTotalThreads(progress.gmailScrapeProgressId, Some(totalThreads))
 
     println(introductions.size + " introductions...")
 
     //var knownEmails = scala.collection.mutable.Buffer(introductions.map(_.introPersonEmail).toSeq:_*)
     val emailByStartDate = scala.collection.mutable.Map[String, Long](introductions.map(a => a.introPersonEmail -> a.introTimeMillis).toSeq:_*)
 
-    threads.drop(toDrop).zipWithIndex.map{case (t, i) =>
+    threads.zipWithIndex.map{case (t, i) =>
 
-      val threadIndex = i+toDrop+1
+      val threadIndex = i+ (totalThreads - threadsFetched) +1
 
-      println("thread "+threadIndex +" / "+threadSize)
+      println("thread "+threadIndex +" / "+totalThreads)
       val thread = getOneThread(service, myEmail, t.getId)
 
       val messages = thread.getMessages.toList
@@ -403,7 +433,7 @@ object EmailScraper {
       saved
     }
 
-    Await.result(GmailScrapeProgress.updateThreadCount(progress.gmailScrapeProgressId, threadSize), Duration.Inf)
+    Await.result(GmailScrapeProgress.updateThreadCount(progress.gmailScrapeProgressId, totalThreads), Duration.Inf)
     Await.result(GmailScrapeProgress.updateStatus(progress.gmailScrapeProgressId, GmailScrapeProgress.STATUS_STOPPED), Duration.Inf)
   }
 
